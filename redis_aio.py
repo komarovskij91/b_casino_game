@@ -767,14 +767,7 @@ async def fetch_all_2(pattern: str, batch_size: int = 100) -> List[Dict[str, Any
 
 async def test_post():
 
-
-
-    dd = {
-        "status": True,
-        "data": 0
-    }
-
-    return dd
+    return settings.test_spin
 
 
 async def ttt():
