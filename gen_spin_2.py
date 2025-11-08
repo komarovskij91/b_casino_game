@@ -5,7 +5,6 @@ import secrets
 from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional, Tuple, Any
 
-# --- Константы, совпадающие с фронтом ---
 ROWS = 11
 MULTIPLIERS = [8, 5, 3, 1.5, 0.8, 0.6, 0.4, 0.6, 0.8, 1.5, 3, 5, 8]
 BALL_RADIUS = 8
@@ -130,12 +129,10 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
         prev_vy = ball["vy"]
         prev_t = t
 
-        # интегрируем шаг
         ball["vy"] += GRAVITY
         ball["x"] += ball["vx"]
         ball["y"] += ball["vy"]
 
-        # столкновения с пинами
         for pin in pins:
             dx = ball["x"] - pin["x"]
             dy = ball["y"] - pin["y"]
@@ -159,7 +156,6 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
                 ))
                 break
 
-        # стены + трение
         if ball["x"] - BALL_RADIUS < 0 or ball["x"] + BALL_RADIUS > DISPLAY_WIDTH:
             ball["vx"] *= -BOUNCE
             ball["x"] = max(BALL_RADIUS, min(DISPLAY_WIDTH - BALL_RADIUS, ball["x"]))
@@ -170,12 +166,7 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
         crossed_floor = prev_y <= slot_floor and ball["y"] > slot_floor
         if crossed_floor:
             denom = ball["y"] - prev_y
-            if abs(denom) < 1e-6:
-                ratio = 1.0
-            else:
-                ratio = (slot_floor - prev_y) / denom
-                ratio = max(0.0, min(1.0, ratio))
-
+            ratio = 1.0 if abs(denom) < 1e-6 else max(0.0, min(1.0, (slot_floor - prev_y) / denom))
             cross_t = prev_t + TIME_STEP * ratio
             cross_x = prev_x + (ball["x"] - prev_x) * ratio
             cross_vx = prev_vx + (ball["vx"] - prev_vx) * ratio
@@ -199,7 +190,6 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
         push_frame()
 
         if ball["y"] > slot_floor:
-            t += TIME_STEP
             ball["y"] = slot_floor
             frames.append(Frame(
                 t=round(t, 3),
@@ -210,10 +200,9 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
             ))
             break
 
-        if t > 30:  # подстраховка
+        if t > 30:
             break
 
-    # страховка: если последний кадр всё ещё выше уровня слотов — дотягиваем
     if frames:
         last_frame = frames[-1]
         target_y = round(slot_floor, 2)
@@ -272,7 +261,7 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
         "collisions": [asdict(c) for c in collisions],
         "slot_hit": {
             "time": frames[-1].t,
-            "slot_center_x": round(slot_center_x, 2),
+            "slot_center_x": round(slot_center_x or geometry["centers"][0], 2),
             "slot_center_y": round(geometry["slot_y"] + geometry["slot_height"] / 2, 2)
         },
         "effects": {
@@ -280,6 +269,17 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
             "coins_seed": rng.randint(0, 2**31 - 1)
         }
     }
+
+    last_frame = frames[-1] if frames else None
+    have_touch = (
+        last_frame is not None
+        and abs(last_frame.y - slot_floor) <= 1e-2
+        and 0 <= slot_index < len(MULTIPLIERS)
+    )
+
+    if not have_touch:
+        new_seed = secrets.token_hex(16)
+        return generate_plinko_scenario(bet, new_seed)
 
     return scenario
 
