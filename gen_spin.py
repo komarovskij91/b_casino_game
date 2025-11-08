@@ -1,0 +1,230 @@
+import json
+import math
+import random
+from dataclasses import dataclass, asdict
+from typing import List, Dict, Any, Optional
+import secrets
+
+# Параметры из текущего фронта
+ROWS = 11
+MULTIPLIERS = [8, 5, 3, 1.5, 0.8, 0.6, 0.4, 0.6, 0.8, 1.5, 3, 5, 8]
+PIN_RADIUS = 8
+BALL_RADIUS = 8
+DISPLAY_WIDTH = 800
+DISPLAY_HEIGHT = 800
+SLOT_HEIGHT = 55
+SLOT_BOTTOM_OFFSET = 10
+
+GRAVITY = 0.3
+FRICTION = 0.98
+BOUNCE = 0.4
+RANDOM_FACTOR_MIN = 0.9
+RANDOM_FACTOR_MAX = 1.1
+
+TIME_STEP = 0.1  # шаг по времени (секунд), как на фронте
+
+@dataclass
+class Frame:
+    t: float
+    x: float
+    y: float
+    vx: float
+    vy: float
+
+@dataclass
+class Collision:
+    index: int
+    time: float
+    pin_x: float
+    pin_y: float
+    exit_vx: float
+    exit_vy: float
+
+def seed_rng(seed: Optional[str]) -> random.Random:
+    if not seed:
+        seed = secrets.token_hex(16)
+    rnd = random.Random()
+    rnd.seed(seed)
+    return rnd, seed
+
+def build_pin_grid() -> List[Dict[str, float]]:
+    pins = []
+    max_pins_per_row = ROWS + 1  # последний ряд = 12 пинов
+    spacing_x = DISPLAY_WIDTH / (max_pins_per_row + 1)
+    spacing_y = (DISPLAY_HEIGHT * 0.75) / ROWS
+    start_y = DISPLAY_HEIGHT * 0.08
+    for row in range(ROWS):
+        pins_in_row = row + 2
+        start_x = (DISPLAY_WIDTH - (pins_in_row - 1) * spacing_x) / 2
+        for col in range(pins_in_row):
+            pins.append({"x": start_x + col * spacing_x,
+                         "y": start_y + row * spacing_y})
+    return pins
+
+def slot_geometry(pin_list) -> Dict[str, Any]:
+    slots_count = len(MULTIPLIERS)
+    last_row_start = sum(range(2, ROWS + 2)) - (rows_last := ROWS + 1)
+    # берем центральные 11 пинов последнего ряда (пропускаем первый)
+    last_row = pin_list[last_row_start:]
+    pins_to_use = last_row[1:slots_count + 1]
+    if len(pins_to_use) > 1:
+        avg_spacing = sum(
+            pins_to_use[i + 1]["x"] - pins_to_use[i]["x"]
+            for i in range(len(pins_to_use) - 1)
+        ) / (len(pins_to_use) - 1)
+    else:
+        avg_spacing = DISPLAY_WIDTH / (slots_count + 1)
+    slot_width = avg_spacing * 0.9
+    total_slots_width = (slots_count - 1) * avg_spacing + slot_width
+    slots_start_x = (DISPLAY_WIDTH - total_slots_width) / 2
+    centers = [slots_start_x + slot_width / 2 + i * avg_spacing
+               for i in range(slots_count)]
+    return {
+        "slot_height": SLOT_HEIGHT,
+        "slot_y": DISPLAY_HEIGHT - SLOT_HEIGHT - SLOT_BOTTOM_OFFSET,
+        "slot_width": slot_width,
+        "avg_spacing": avg_spacing,
+        "slots_start_x": slots_start_x,
+        "centers": centers
+    }
+
+def generate_plinko_scenario(
+    bet: float,
+    seed: Optional[str] = None
+) -> Dict[str, Any]:
+    rnd, seed = seed_rng(seed)
+    pins = build_pin_grid()
+    geometry = slot_geometry(pins)
+
+    # стартовые параметры как на фронте
+    start_x = DISPLAY_WIDTH / 2 + (rnd.random() - 0.5) * 26
+    start_y = 20.0
+    vx = (rnd.random() - 0.5) * 2
+    vy = 0.0
+
+    ball = {"x": start_x, "y": start_y, "vx": vx, "vy": vy}
+    frames: List[Frame] = []
+    collisions: List[Collision] = []
+    t = 0.0
+
+    def push_frame():
+        frames.append(Frame(t=t,
+                            x=round(ball["x"], 2),
+                            y=round(ball["y"], 2),
+                            vx=round(ball["vx"], 2),
+                            vy=round(ball["vy"], 2)))
+
+    push_frame()
+    slot_y = geometry["slot_y"]
+    slot_height = geometry["slot_height"]
+
+    while True:
+        # Этап 1: применяем гравитацию и обновляем позиции
+        ball["vy"] += GRAVITY
+        ball["x"] += ball["vx"]
+        ball["y"] += ball["vy"]
+
+        # Столкновение с пинами
+        for pin in pins:
+            dx = ball["x"] - pin["x"]
+            dy = ball["y"] - pin["y"]
+            distance = math.hypot(dx, dy)
+            if distance < PIN_RADIUS + BALL_RADIUS:
+                angle = math.atan2(dy, dx)
+                speed = math.hypot(ball["vx"], ball["vy"])
+                random_factor = rnd.uniform(RANDOM_FACTOR_MIN, RANDOM_FACTOR_MAX)
+                ball["vx"] = math.cos(angle) * speed * BOUNCE * random_factor
+                ball["vy"] = math.sin(angle) * speed * BOUNCE * random_factor
+                overlap = PIN_RADIUS + BALL_RADIUS - distance + 1
+                ball["x"] += math.cos(angle) * overlap
+                ball["y"] += math.sin(angle) * overlap
+                collisions.append(Collision(
+                    index=len(collisions) + 1,
+                    time=round(t, 2),
+                    pin_x=round(pin["x"], 1),
+                    pin_y=round(pin["y"], 1),
+                    exit_vx=round(ball["vx"], 2),
+                    exit_vy=round(ball["vy"], 2)
+                ))
+                break
+
+        # Столкновение со стенами
+        if ball["x"] - BALL_RADIUS < 0 or ball["x"] + BALL_RADIUS > DISPLAY_WIDTH:
+            ball["vx"] *= -BOUNCE
+            ball["x"] = max(BALL_RADIUS, min(DISPLAY_WIDTH - BALL_RADIUS, ball["x"]))
+
+        # Трение
+        ball["vx"] *= FRICTION
+
+        t += TIME_STEP
+        push_frame()
+
+        # Проверка достижения нижнего уровня (как на фронте)
+        if ball["y"] > slot_y + slot_height:
+            break
+
+        # Подстраховка от бесконечного цикла
+        if t > 20:
+            break
+
+    # Определяем слот
+    slot_index = -1
+    slot_center_x = None
+    for i, center in enumerate(geometry["centers"]):
+        left = center - geometry["slot_width"] / 2
+        right = center + geometry["slot_width"] / 2
+        if left <= ball["x"] <= right:
+            slot_index = i
+            slot_center_x = center
+            break
+
+    # Если ни один не подошёл – выбираем ближайший
+    if slot_index == -1:
+        distances = [abs(ball["x"] - center) for center in geometry["centers"]]
+        slot_index = int(min(range(len(distances)), key=lambda i: distances[i]))
+        slot_center_x = geometry["centers"][slot_index]
+
+    multiplier = MULTIPLIERS[slot_index]
+    win_amount = round(bet * multiplier, 2)
+
+    scenario = {
+        "meta": {
+            "seed": seed,
+            "rows": ROWS,
+            "multiplier_list": MULTIPLIERS
+        },
+        "ball": {
+            "radius": BALL_RADIUS,
+            "color": "#ff7f00",
+            "start_x": round(start_x, 2),
+            "start_y": start_y,
+            "start_vx": round(vx, 2),
+            "start_vy": round(vy, 2)
+        },
+        "result": {
+            "slot_index": slot_index,
+            "multiplier": multiplier,
+            "bet": round(bet, 2),
+            "win_amount": win_amount
+        },
+        "path": [],  # можно вычислить из collisions, если нужно
+        "frames": [asdict(f) for f in frames],
+        "collisions": [asdict(c) for c in collisions],
+        "slot_hit": {
+            "time": frames[-1].t,
+            "slot_center_x": round(slot_center_x, 2),
+            "slot_center_y": round(geometry["slot_y"] + geometry["slot_height"] / 2, 2)
+        },
+        "effects": {
+            "particles_seed": rnd.randint(0, 2**31 - 1),
+            "coins_seed": rnd.randint(0, 2**31 - 1)
+        }
+    }
+
+    return scenario
+
+
+
+
+dd = generate_plinko_scenario(10)
+print(dd)

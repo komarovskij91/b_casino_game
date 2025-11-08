@@ -31,10 +31,18 @@ from test import gen_item
 import os
 from func import power_chek, get_strongest_style, pick_nearby_rival, hype_phrase, lose_phrase, get_damage_bonus
 import test
-
+import json
+import math
+import random
+from dataclasses import dataclass, asdict
+from typing import List, Dict, Any, Optional
 
 
 from pay import get_pay_up_slot
+
+
+
+from gen_spin import generate_plinko_scenario
 
 redis_url = os.getenv("REDIS_URL")
 if not redis_url:
@@ -766,8 +774,7 @@ async def fetch_all_2(pattern: str, batch_size: int = 100) -> List[Dict[str, Any
 
 
 async def test_post():
-
-    return settings.test_spin
+    return generate_plinko_scenario(10)
 
 
 async def ttt():
@@ -781,7 +788,7 @@ async def ttt():
     sacha = 980627987
 
     id_evgeniyshow = 194092787
-    dd = ""
+    dd = await test_post()
 
 
     pass
