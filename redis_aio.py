@@ -42,7 +42,9 @@ from pay import get_pay_up_slot
 
 
 
-from gen_spin import generate_plinko_scenario, start_data
+# from gen_spin import generate_plinko_scenario, start_data
+from gen_spin_2 import generate_plinko_scenario, start_data
+
 
 redis_url = os.getenv("REDIS_URL")
 if not redis_url:
@@ -780,6 +782,12 @@ async def start_data_0():
 
 
 
+async def pool_spin():
+    pass
+
+
+
+
 async def ttt():
     id_lera = 577753618
     id_nik = 563356818
@@ -791,8 +799,8 @@ async def ttt():
     sacha = 980627987
 
     id_evgeniyshow = 194092787
-    dd = await start_data_0()
-    print(dd)
+    # dd = await start_data_0()
+    # print(dd)
 
 
     pass
