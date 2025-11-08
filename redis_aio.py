@@ -770,8 +770,8 @@ async def fetch_all_2(pattern: str, batch_size: int = 100) -> List[Dict[str, Any
 
 
 
-async def test_post():
-    return generate_plinko_scenario(10)
+async def test_post(spin):
+    return generate_plinko_scenario(spin)
 
 
 async def start_data_0():

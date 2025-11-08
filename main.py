@@ -240,7 +240,7 @@ async def api_v2(request: model.Request):
         }
 
     if request.method == "test_post":
-        return await test_post()
+        return await test_post(spin=req["params"]["spin"])
 
     if request.method == "start_data":
         return start_data_0()
