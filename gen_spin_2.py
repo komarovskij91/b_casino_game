@@ -17,7 +17,7 @@ GRAVITY = 0.3
 FRICTION = 0.98
 BOUNCE = 0.4
 
-TIME_STEP = 0.08   # шаг интеграции (сек.)
+TIME_STEP = 0.08  # шаг интеграции (сек.)
 
 @dataclass
 class Frame:
@@ -175,6 +175,7 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
             else:
                 ratio = (slot_floor - prev_y) / denom
                 ratio = max(0.0, min(1.0, ratio))
+
             cross_t = prev_t + TIME_STEP * ratio
             cross_x = prev_x + (ball["x"] - prev_x) * ratio
             cross_vx = prev_vx + (ball["vx"] - prev_vx) * ratio
@@ -198,11 +199,21 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
         push_frame()
 
         if ball["y"] > slot_floor:
+            t += TIME_STEP
+            ball["y"] = slot_floor
+            frames.append(Frame(
+                t=round(t, 3),
+                x=round(ball["x"], 2),
+                y=round(ball["y"], 2),
+                vx=round(ball["vx"], 2),
+                vy=round(ball["vy"], 2)
+            ))
             break
+
         if t > 30:  # подстраховка
             break
 
-    # страховка: если последний кадр все равно выше линии слотов — плавно "доталкиваем"
+    # страховка: если последний кадр всё ещё выше уровня слотов — дотягиваем
     if frames:
         last_frame = frames[-1]
         target_y = round(slot_floor, 2)
