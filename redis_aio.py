@@ -42,7 +42,7 @@ from pay import get_pay_up_slot
 
 
 
-from gen_spin import generate_plinko_path
+from gen_spin import generate_plinko_scenario
 
 redis_url = os.getenv("REDIS_URL")
 if not redis_url:
@@ -771,7 +771,7 @@ async def fetch_all_2(pattern: str, batch_size: int = 100) -> List[Dict[str, Any
 
 
 async def test_post():
-    return generate_plinko_path(10)
+    return generate_plinko_scenario(10)
 
 
 async def ttt():
