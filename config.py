@@ -1,0 +1,12 @@
+import os
+
+# API_SERVICE_VERSION = os.environ["VERSION"]
+#
+# TG_BOT_TOKEN = os.environ["BOT_TOKEN"]
+# AUTH_SESSION_ALIVE = os.environ["AUTH_SESSION_ALIVE"]
+# MONGO_URI = os.environ["MONGODB_URL"]
+# MONGO_DB = os.environ["MONGO_DB"]
+
+API_SERVICE_VERSION = "1.0"
+TG_BOT_TOKEN = "8231148635:AAEYKFi5zeFV5t7n2fii_F-l269mGGg_NFc"  # мой токен
+AUTH_SESSION_ALIVE = 610

@@ -1,0 +1,11 @@
+{
+  'status': True,
+  'ru': {
+    'title': 'Снеговик',
+    'description': 'Этот Снеговик вылеплен на века! И поэтому дает буст +100%'
+  },
+  'en': {
+    'title': 'Snowman',
+    'description': 'This Snowman is built to last! It grants a boost of +100%'
+  }
+}

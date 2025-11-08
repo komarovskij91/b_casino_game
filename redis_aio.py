@@ -1,0 +1,797 @@
+import redis.asyncio as aioredis
+
+import json
+import motor.motor_asyncio
+import asyncio
+import time
+from typing import List, Dict, Any, Optional, Tuple
+
+
+from datetime import datetime, timedelta
+import random
+import inspect
+import re
+
+import aiohttp
+from gen_top import build_top_snapshot, compare_leagues
+import requests
+
+from collections import Counter
+
+from aiogram import Bot
+from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, PreCheckoutQuery, ContentType, LabeledPrice
+import config
+bot = Bot(config.TG_BOT_TOKEN, parse_mode='html')
+
+##### Файлы
+import settings
+import langs
+from test import gen_item
+
+import os
+from func import power_chek, get_strongest_style, pick_nearby_rival, hype_phrase, lose_phrase, get_damage_bonus
+import test
+
+
+
+from pay import get_pay_up_slot
+
+redis_url = os.getenv("REDIS_URL")
+if not redis_url:
+    # Строка подключения
+    redis_url = "redis://default:PoMGWkghyNOhahqsulDlTzFfzNUixrWL@maglev.proxy.rlwy.net:30329"
+    print("конект через публик")
+else:
+    print("Коннект через приватку к редис")
+
+# Создаем объект Redis
+client_redis = aioredis.from_url(redis_url)
+
+
+
+# рандомный айди
+def idrr0():
+    rr = "AEIOUYBCDFGHJKLMNPQRSTVWXZaeiouybcdfghjklmnpqrstvwxz"
+    return f"{int(time.time())}{random.choice(rr)}{random.choice(rr)}{random.choice(rr)}{random.choice(rr)}{random.choice(rr)}"
+
+
+
+
+
+
+# запрос на новые подарки
+async def post_request_get_gift(id_telega, user_name):
+    url = "https://fastapigift-production.up.railway.app/v1"
+    print(f"Отправили запрос на получение подарков для {id_telega}, {user_name}")
+
+    try:
+        id_telega_int = int(id_telega)
+    except ValueError:
+        print("Ошибка: id_telega должен быть числом")
+        return None
+
+    payload = {
+        "method": "test2",
+        "call_started": "call_started",
+        "params": {
+            "username": f"{user_name}",
+            "id_telega": f"{id_telega}"
+        },
+        "qhc": ""
+    }
+
+
+    print("Отправка запроса на:", url)
+    print("Данные запроса:", payload)
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, ssl=False) as response:  # ← ssl=False отключает проверку
+                if response.status == 200:
+                    data = await response.json()
+                    print("Успешный ответ:", data)
+                    return data
+                else:
+                    print(f"Ошибка: HTTP {response.status}")
+                    return None
+    except Exception as e:
+        print("Ошибка при запросе:", e)
+        return None
+
+
+async def reupdata(key, data):
+    await client_redis.set(
+        key,
+        json.dumps(data, ensure_ascii=False)  # кириллица сохраняется читаемо
+    )
+
+# взять с базы что-то
+async def redata(key):
+
+    try:
+        # data = await json.loads(client_redis.get(key).decode())
+        data = await client_redis.get(key)
+
+        data = json.loads(data.decode())
+    except Exception as ex:
+        # print(f"reupdata - , key {key}", ex)
+        data = None
+    return data
+
+
+async def del_key(id_key):
+    dd = await client_redis.delete(id_key)
+    print(dd)
+
+
+
+# дата реги для тереншена
+async def data_reg(id_telega):
+    # # Получение всех ID пользователей из "коллекции"
+    # user_ids = await client_redis.smembers(f"data_reg:{today_date}")  # Вернет set
+    # all_users = []
+    # # Итерация по всем пользователям
+    # for user_id in user_ids:
+    #     # user_data = client.get(f"user:{user_id.decode()}")
+    #     all_users.append(json.loads(user_id))  # Декодируем JSON
+
+    today_date = time.strftime("%Y-%m-%d", time.localtime(time.time()))
+    await client_redis.sadd(f"data_reg:{today_date}", id_telega)
+
+
+# Создать нового человека
+async def rega_new_user(id_telegram, data):
+
+    # print("rega_new_user id_telegram", id_telegram)
+    # print("data", data)
+    # data = {
+    #     "username": user_n,
+    #     "first_name": first_n,
+    #     'last_name': last_n,
+    #     'language_code': language,
+    #     "ref": message.text[7:]
+    # }
+
+    if data == {}:
+        data = {
+            "username": None,
+            "first_name": None,
+            'last_name': None,
+            'language_code': "en",
+            "ref": ""
+        }
+
+    if int(id_telegram) > 0:
+
+        user = await redata(f"ny_user:{id_telegram}")
+
+        if user != None:
+            print(f"есть уже {id_telegram}")
+
+            return user
+
+        else:
+
+            nuser = 0
+            nuser = settings.new_user.copy()
+
+            nuser["id_telega"] = id_telegram
+
+            nuser["name"] = ""
+            nuser["data_reg"] = time.time()
+
+            # для ежедневок
+            nuser["old_time"] = time.time()
+            nuser["old_day"] = time.strftime('%Y-%m-%d %H:%M', time.localtime(time.time()))
+            nuser["old_time_reg_energ"] = time.time()
+
+
+            if data["language_code"] != "ru" and data["language_code"] != "en":
+                data["language_code"] = "en"
+
+            nuser["lang"] = data["language_code"]
+            nuser["first_name"] = data["first_name"]
+            nuser["last_name"] = data["last_name"]
+            nuser["lang"] = data["language_code"]
+            nuser["username"] = data["username"]
+            nuser["ref"] = data["ref"]
+
+
+            red_data_user = await redata(f"ny_user:{data['ref']}")
+            if red_data_user != None:
+                print(f"Рега по ссылке юзера")
+
+            # выдать подарок и поместить на слот
+            # проверка на реф
+            if data["ref"] == "":
+                print(f"Рега без рефки")
+
+
+            count_player = await redata("ny_count_player")
+            nn_count = count_player["count_player"] + 1
+            nuser["count_player"] = nn_count
+            count_player["count_player"] += 1
+            await reupdata("ny_count_player", count_player)
+
+
+            # создали персанажа
+            # вставить
+            await client_redis.set(f"ny_user:{id_telegram}", json.dumps(nuser))
+
+            # Обновление "коллекции" users
+            await client_redis.sadd("ny_users", id_telegram)
+
+            # Для ретеншена
+            await data_reg(id_telegram)
+            print("ok _ Зарегали нового человека", id_telegram, data)
+
+            user_gift = {
+                "list": []
+            }
+
+            await reupdata(f"user_gift:{id_telegram}", user_gift)
+            await post_request_get_gift(id_telegram, nuser["username"])
+            await client_redis.set(f"user_pars:{id_telegram}", "1", ex=6 * 60 * 60)
+
+
+
+# Проверка новых параметров
+async def chek_new_param(id_telegram, user_data):
+
+    for new_param in settings.new_user:
+        if new_param not in user_data:
+            user_data[new_param] = settings.new_user[new_param]
+            print(f"добавили для {id_telegram} - {new_param}", settings.new_user[new_param])
+
+    await reupdata(f"ny_user:{id_telegram}", user_data)
+
+    return user_data
+
+
+
+
+async def update_login_streak(id_telega):
+    """
+    Обновляет дневной стрик посещений игрока.
+    Если день тот же — ничего не меняем.
+    Если вчера — +1 к стрику.
+    Если пропущено >=1 дня — сброс до 1.
+    """
+
+    key = f"ny_user:{id_telega}"
+    user = await redata(key)
+
+    now_ts = time.time()
+    now_date = datetime.utcfromtimestamp(now_ts).date()
+    last_ts = float(user.get("day_time") or 0)
+
+    # Первый вход
+    if last_ts <= 0:
+        user["day"] = 1
+        user["day_time"] = now_ts
+        await reupdata(key, user)
+        return {"status": "first_visit"}
+
+    last_date = datetime.utcfromtimestamp(last_ts).date()
+    delta_days = (now_date - last_date).days
+
+    if delta_days == 0:
+        # Тот же день
+        user["day_time"] = now_ts
+        status = "same_day"
+    elif delta_days == 1:
+        # Заход подряд
+        user["day"] += 1
+
+        user["day_time"] = now_ts
+        status = "continued"
+
+    else:
+        # Пропуск
+        user["day"] = 1
+        user["day_time"] = now_ts
+        status = "reset"
+
+    await reupdata(key, user)
+
+    # reset и first_visit - показываем табличку с инфой о первом дне
+    # continued - Заход подряд - показываем сколько чего получает
+
+
+    return {"status": status}
+
+
+
+
+def seconds_until_new_year() -> int:
+    # Текущая метка времени
+    now = time.time()
+    # Целевая дата: 1 января 2026, 00:00:00
+    new_year = datetime(2026, 1, 1, 0, 0, 0).timestamp()
+    # Разница в секундах
+    return int(new_year - now)
+
+################################################################################################
+async def chek_test():
+    pass
+
+async def test_while():
+    # print("запустили test_while")
+    while True:
+        # print(f"ok")
+        await asyncio.sleep(5)
+
+
+async def chek_test():
+    # Параллельный запуск двух асинхронных функций
+    await asyncio.gather(
+        test_while() # сюда потом еще подкл функции ,
+        # auto_farm()
+    )
+
+
+
+
+###########
+
+async def get_star_transactions(limit=50, offset=0):
+    """Сырой ответ Telegram Bot API getStarTransactions"""
+    resp = await bot.request("getStarTransactions", {"limit": limit, "offset": offset})
+    return resp or {}
+
+
+async def peek_star_transactions(limit=20, offset=0):
+    """Удобный вид для глаз — только основные поля"""
+    resp = await get_star_transactions(limit, offset)
+    out = []
+    for tx in resp.get("transactions", []):
+        out.append({
+            "id": tx.get("id"),
+            "amount": tx.get("amount"),
+            "date": tx.get("date"),
+            "readable_time": __import__("time").strftime("%Y-%m-%d %H:%M:%S", __import__("time").localtime(tx.get("date") or 0)),
+            "is_income": tx.get("is_income"),
+            "direction": tx.get("direction"),
+            "source": tx.get("source") or tx.get("title") or tx.get("provider"),
+        })
+
+    dd = {
+        "count": len(out),
+        "list": out
+    }
+
+    return dd
+
+
+# Выставить счет
+async def get_pay(id_telega, many):
+
+    shop = {
+        "ru": {
+            "title": "Пополнить баланс",
+            "description": f"Пополнить баланс на {many} Stars"
+        },
+        "en": {
+            "title": "Top up balance",
+            "description": f"Top up your balance with {many} Stars"
+        }
+    }
+
+    user = await redata(f"ny_user:{id_telega}")
+    lang = user["lang"]
+
+    title = shop[lang]["title"]
+    description = shop[lang]["description"]
+
+    # разобрать что хотят купить в BOX
+    id_pay_my = f"id_pay_my:{id_telega}:{idrr0()}"
+
+    try:
+
+        prices = [LabeledPrice(label='XTR', amount=int(many))]
+
+        # Create invoice
+        invoice_link = await bot.create_invoice_link(
+            title=title,  # название продукта - бокс
+            description=description,  # полное нахвание продукта
+            provider_token='',
+            currency='XTR',
+            prices=prices,
+            payload=id_pay_my
+        )
+
+        # print(invoice_link)  # ссылка на оплату
+
+        # форматируем в нужный вид
+        formatted_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+        pay_data = {
+            "id_pay_my": id_pay_my,
+            "id_telega": id_telega,
+            "typ": "typ",  # что купили
+            "invoice_link": invoice_link,
+            "amount": many,
+            "status_pay": "",
+            "payload": id_pay_my,
+            "time": f'{datetime.now().strftime("%Y-%m-%d %H:%M")}',
+        }
+        # print("pay_data", pay_data)
+
+        # Создали себе запись с - id_pay_my
+        await reupdata(id_pay_my, pay_data)
+
+        return {
+            "status": True,
+            "payment_url": invoice_link,
+            "payload": id_pay_my
+        }
+
+    except Exception as e:
+
+        print(e)
+
+        return {
+            "status": False,
+            "payment_url": "",
+            "err": e
+        }
+
+
+# проверка платежа
+async def chek_pay(id_pay_my):
+    def extract_user_id(key: str) -> int:
+        """
+        Из строки вида 'id_pay_my:310410518:1759164859kHaor'
+        возвращает 310410518 как int.
+        """
+        parts = key.split(":")
+        if len(parts) >= 3:
+            return int(parts[1])  # второй элемент — user_id
+        raise ValueError("Неверный формат ключа")
+
+    data = await redata(id_pay_my)
+    id_telegram = extract_user_id(id_pay_my)
+    # print("id_telegram", id_telegram)
+    # print("data", data)
+
+    typ = data["typ"]
+
+    # проверяем полачен ли платеж
+    dd_status_pay = await stars_payments(id_pay_my)
+    if dd_status_pay["status"] == True:
+
+        # выдаем то что надо выдать
+        user = await redata(f"ny_user:{id_telegram}")
+        user["stars"] += dd_status_pay["amount"]
+        await reupdata(f"ny_user:{id_telegram}", user)
+
+        dd = {
+            "title": {
+                "ru": "Успех",
+                "en": "Success"
+            },
+            "description": {
+                "ru": f"Ваш баланс успешно пополнен на {dd_status_pay['amount']} Starts",
+                "en": f"Your balance has been successfully topped up with {dd_status_pay['amount']} Starts"
+            },
+            "img": None,
+            "tgs": None
+
+        }
+
+        print(dd)
+        return dd
+
+
+
+
+    if dd_status_pay["status"] == "pay":
+        dd = {
+            "title": {
+                "ru": "Уже был оплачен!",
+                "en": "Already paid"
+            },
+            "description": {
+                "ru": f"Счет уже был оплачен ранее",
+                "en": f"The bill has already been paid earlier."
+            },
+            "img": None,
+            "tgs": None
+
+        }
+
+        # print(dd)
+        return dd
+
+    if dd_status_pay["status"] == False:
+        dd = {
+            "title": {
+                "ru": "Не оплачен",
+                "en": "Not paid"
+            },
+            "description": {
+                "ru": f"Счет на оплачен",
+                "en": f"The invoice has been paid."
+            },
+            "img": None,
+            "tgs": None
+
+        }
+
+        # print(dd)
+        return dd
+
+
+    dd = {
+        "status": "oooo =("
+    }
+
+    return dd
+
+
+# дать то что надо после покупки
+async def purchase(id_telegram, typ):
+
+
+    user = await redata(f"user:{id_telegram}")
+
+    dd = {
+        "status": "",
+        "mess": "",
+        "typ": ""
+    }
+
+    if typ == "up_one_slot":
+
+        # print("start", user["lvl_grade"])
+        try:
+            idx = settings.ll.index(user["lvl_grade"])
+        except ValueError:
+            return False  # если такого слова нет
+        if idx + 1 < len(settings.ll):
+            user["lvl_grade"] = settings.ll[idx + 1]
+            # print("fin", user["lvl_grade"])
+            await reupdata(f"user:{id_telegram}", user)
+
+            dd["status"] = True
+            dd["typ"] = typ
+            dd["mess"] = "Прокачали слот на +1"
+            dd["now"] = user["lvl_grade"]
+
+            return dd
+
+        return False  # если это был последний
+
+    if typ == "up_liga_slot":
+        # print("start", user["lvl_grade"])
+
+        # разбираем, например tree_3 -> league=tree, tier=3
+        league, tier = user["lvl_grade"].split("_")
+
+        # если лига не найдена — вернём как есть
+        if league not in settings.LEAGUE_SEQUENCE:
+            return user["lvl_grade"]
+        idx = settings.LEAGUE_SEQUENCE.index(league)
+
+        # если diamond — остаёмся на diamond
+        if idx == len(settings.LEAGUE_SEQUENCE) - 1:
+            return user["lvl_grade"]
+        next_league = settings.LEAGUE_SEQUENCE[idx + 1]
+
+        user["lvl_grade"] = f"{next_league}_{tier}"
+        # print("fin", user["lvl_grade"])
+        await reupdata(f"user:{id_telegram}", user)
+
+        dd["status"] = True
+        dd["typ"] = typ
+        dd["mess"] = "Прокачали все слоты на +1"
+        dd["now"] = f"{next_league}_{tier}"
+
+
+        return dd
+
+    if typ == "change_slot":
+
+        user_pay_id_gift = await redata(f"user_pay_id_gift:{id_telegram}")
+
+        id_gift_ = user_pay_id_gift["id_gift"]
+        new_style_ = user_pay_id_gift["new_style"]
+
+        gift = await redata(id_gift_)
+
+        if new_style_ in settings.user_style:
+            gift["new_style"] = new_style_
+            await reupdata(id_gift_, gift)
+            user = await redata(f"user:{id_telegram}")
+            for ii in settings.user_slot:
+                if user[ii]:
+                    if id_gift_ == user[ii]["id"]:
+                        user[ii] = None
+            await reupdata(f"user:{id_telegram}", user)
+
+            # print(ff)
+
+            dd["status"] = True
+            dd["typ"] = typ
+            dd["mess"] = "Дали новую стихию"
+            dd["now"] = new_style_
+
+            return dd
+
+    if typ == "skin":
+        user = await redata(f"user:{id_telegram}")
+        user["super_pepe"] = True
+        await reupdata(f"user:{id_telegram}", user)
+
+        dd["status"] = True
+        dd["typ"] = typ
+        dd["mess"] = "Super PEPE"
+        dd["now"] = "Super PEPE"
+
+        return dd
+
+    if typ == "off_advertising":
+        user = await redata(f"user:{id_telegram}")
+        user["ads_off"] = True
+        await reupdata(f"user:{id_telegram}", user)
+
+        dd["status"] = True
+        dd["typ"] = typ
+        dd["mess"] = "Off ADS"
+        dd["now"] = "Off ADS"
+
+        return dd
+
+
+    return False
+
+
+async def stars_payments(payload=None):
+    limit_offset = await redata(f"ny_limit_offset")
+    # начинаем с 0
+    limit = limit_offset["limit"]  # Сколько на странице
+    offset = limit_offset["offset"]  # Страница
+
+    data_pay = await redata(payload)
+    print(data_pay)
+
+    if data_pay["status_pay"] == "":
+        pass
+
+    if data_pay["status_pay"] == "pay":
+
+        dd = {
+            "status": "pay",
+            "mess": "уже был Оплачен"
+        }
+        # print(dd)
+        return dd
+
+
+
+    mm = 0
+
+    list_pay = []
+
+    while True:
+
+        dd = await peek_star_transactions(limit, offset)
+        new_data = dd
+        # print(dd["count"])
+        mm += dd["count"]
+
+        # просто просмотр данных
+        for i in dd["list"]:
+            # print(i["readable_time"], i["source"]["invoice_payload"])
+            list_pay.append(i["source"]["invoice_payload"])
+
+        # если ранво 0 - то смотрим предыдущую папку и там ищием платеж
+        if dd["count"] == 0:
+            # print("конец")
+            # print(f"всего {mm}, последний limit {limit} offset {offset}")
+            break
+
+
+        if dd["count"] >= limit:
+            offset += limit
+            # print("еще")
+            await asyncio.sleep(0)
+
+        else:
+
+            # print(f"limit {limit}")
+            # print(f"offset {offset}")
+
+            limit_offset["limit"] = limit
+            limit_offset["offset"] = offset
+            await reupdata("ny_limit_offset", limit_offset)
+
+            # print("конец")
+            # print(f"всего {mm}, последний limit {limit} offset {offset}")
+            break
+
+    if payload in list_pay:
+        # print(True)
+        data_pay["status_pay"] = "pay"
+        await reupdata(payload, data_pay)
+
+        dd = {
+            "id_telega": data_pay["id_telega"],
+            "amount": data_pay["amount"],
+            "status": True,
+            "mess": "оплатил - можно выдать"
+        }
+        # print(dd)
+        return dd
+
+    else:
+        dd = {
+            "status": False,
+            "mess": "не нашли счет - не смогли проверить"
+        }
+        # print(dd)
+        return dd
+
+
+
+# ---------- УНИВЕРСАЛЬНЫЙ СБОР ДАННЫХ ИЗ REDIS ----------
+async def fetch_all_2(pattern: str, batch_size: int = 100) -> List[Dict[str, Any]]:
+    cursor = 0
+    keys: List[str] = []
+    while True:
+        cursor, batch = await client_redis.scan(cursor=cursor, match=pattern, count=batch_size)
+        for k in batch:
+            keys.append(k.decode("utf-8", errors="ignore") if isinstance(k, (bytes, bytearray)) else k)
+        if cursor == 0:
+            break
+
+    all_rows: List[Dict[str, Any]] = []
+    for i in range(0, len(keys), batch_size):
+        chunk = keys[i:i + batch_size]
+        tasks = [redata(k) for k in chunk]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for r in results:
+            if isinstance(r, Exception):
+                # можно логировать r
+                continue
+            if isinstance(r, dict):
+                all_rows.append(r)
+    return all_rows
+
+
+
+
+
+
+
+
+async def test_post():
+
+
+
+    dd = {
+        "status": True,
+        "data": 0
+    }
+
+    return dd
+
+
+async def ttt():
+    id_lera = 577753618
+    id_nik = 563356818
+    id_telegram = 310410518  # мой
+    id_sasha = 980627987
+    id_andr = 123857224
+    my_seve = 8413154647  # Егорка Комар
+    id_afon = 433688884
+    sacha = 980627987
+
+    id_evgeniyshow = 194092787
+    dd = ""
+
+
+    pass
+
+# asyncio.get_event_loop().run_until_complete(ttt())
+
