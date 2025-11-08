@@ -24,7 +24,7 @@ bot = Bot(config.TG_BOT_TOKEN, parse_mode='html')
 
 
 
-from prometheus_client import make_asgi_app, Info, Counter, Summary, start_data_0
+from prometheus_client import make_asgi_app, Info, Counter, Summary
 import time
 
 
@@ -44,7 +44,7 @@ import inspect
 
 # сделдать ручную добычу каждый час или каждые 15 минут
 
-from redis_aio import test_post, rega_new_user, test_while, chek_test
+from redis_aio import test_post, rega_new_user, test_while, chek_test, start_data_0
 
 print("ok Start")
 

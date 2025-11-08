@@ -775,7 +775,7 @@ async def test_post():
 
 
 async def start_data_0():
-    return start_data
+    return start_data()
 
 
 
