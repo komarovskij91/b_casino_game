@@ -775,7 +775,8 @@ async def test_post():
 
 
 async def start_data_0():
-    return start_data()
+    dd = start_data()
+    return dd
 
 
 
@@ -790,7 +791,7 @@ async def ttt():
     sacha = 980627987
 
     id_evgeniyshow = 194092787
-    dd = await test_post()
+    dd = await start_data_0()
     print(dd)
 
 
