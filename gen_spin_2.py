@@ -142,7 +142,7 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
             distance = math.hypot(dx, dy)
             if distance < BALL_RADIUS + PIN_RADIUS:
                 angle = math.atan2(dy, dx)
-                speed = math.hypот(ball["vx"], ball["vy"])
+                speed = math.hypot(ball["vx"], ball["vy"])
                 random_factor = rng.uniform(0.9, 1.1)
                 ball["vx"] = math.cos(angle) * speed * BOUNCE * random_factor
                 ball["vy"] = math.sin(angle) * speed * BOUNCE * random_factor
