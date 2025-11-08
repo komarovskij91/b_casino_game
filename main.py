@@ -24,7 +24,7 @@ bot = Bot(config.TG_BOT_TOKEN, parse_mode='html')
 
 
 
-from prometheus_client import make_asgi_app, Info, Counter, Summary
+from prometheus_client import make_asgi_app, Info, Counter, Summary, start_data_0
 import time
 
 
@@ -242,6 +242,8 @@ async def api_v2(request: model.Request):
     if request.method == "test_post":
         return await test_post()
 
+    if request.method == "start_data":
+        return start_data_0()
 
 
 

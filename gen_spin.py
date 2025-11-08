@@ -215,3 +215,22 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
     }
 
     return scenario
+
+
+
+
+def start_data():
+    dd = {
+        "ROWS": ROWS,
+        "MULTIPLIERS": MULTIPLIERS,
+        "BALL_RADIUS": BALL_RADIUS,
+        "PIN_RADIUS": PIN_RADIUS,
+        "DISPLAY_WIDTH": DISPLAY_WIDTH,
+        "DISPLAY_HEIGHT": DISPLAY_HEIGHT,
+        "GRAVITY": GRAVITY,
+        "FRICTION": FRICTION,
+        "BOUNCE": BOUNCE,
+        "TIME_STEP": TIME_STEP
+    }
+
+    return dd
