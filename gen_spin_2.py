@@ -17,7 +17,7 @@ GRAVITY = 0.3
 FRICTION = 0.98
 BOUNCE = 0.4
 
-TIME_STEP = 0.08  # шаг интеграции (сек.)
+TIME_STEP = 0.08   # шаг интеграции (сек.)
 
 @dataclass
 class Frame:
@@ -130,7 +130,7 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
         prev_vy = ball["vy"]
         prev_t = t
 
-        # шаг интеграции
+        # интегрируем шаг
         ball["vy"] += GRAVITY
         ball["x"] += ball["vx"]
         ball["y"] += ball["vy"]
@@ -142,15 +142,13 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
             distance = math.hypot(dx, dy)
             if distance < BALL_RADIUS + PIN_RADIUS:
                 angle = math.atan2(dy, dx)
-                speed = math.hypot(ball["vx"], ball["vy"])
+                speed = math.hypот(ball["vx"], ball["vy"])
                 random_factor = rng.uniform(0.9, 1.1)
                 ball["vx"] = math.cos(angle) * speed * BOUNCE * random_factor
                 ball["vy"] = math.sin(angle) * speed * BOUNCE * random_factor
-
                 overlap = BALL_RADIUS + PIN_RADIUS - distance + 1
                 ball["x"] += math.cos(angle) * overlap
                 ball["y"] += math.sin(angle) * overlap
-
                 collisions.append(Collision(
                     index=len(collisions) + 1,
                     time=round(prev_t, 3),
@@ -161,7 +159,7 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
                 ))
                 break
 
-        # границы и трение
+        # стены + трение
         if ball["x"] - BALL_RADIUS < 0 or ball["x"] + BALL_RADIUS > DISPLAY_WIDTH:
             ball["vx"] *= -BOUNCE
             ball["x"] = max(BALL_RADIUS, min(DISPLAY_WIDTH - BALL_RADIUS, ball["x"]))
@@ -169,7 +167,6 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
 
         t += TIME_STEP
 
-        # проверяем, смог ли шарик пересечь линию слотов за этот шаг
         crossed_floor = prev_y <= slot_floor and ball["y"] > slot_floor
         if crossed_floor:
             denom = ball["y"] - prev_y
@@ -178,7 +175,6 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
             else:
                 ratio = (slot_floor - prev_y) / denom
                 ratio = max(0.0, min(1.0, ratio))
-
             cross_t = prev_t + TIME_STEP * ratio
             cross_x = prev_x + (ball["x"] - prev_x) * ratio
             cross_vx = prev_vx + (ball["vx"] - prev_vx) * ratio
@@ -205,6 +201,22 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
             break
         if t > 30:  # подстраховка
             break
+
+    # страховка: если последний кадр все равно выше линии слотов — плавно "доталкиваем"
+    if frames:
+        last_frame = frames[-1]
+        target_y = round(slot_floor, 2)
+        if last_frame.y < target_y:
+            settle_t = round(last_frame.t + TIME_STEP / 4, 3)
+            frames.append(Frame(
+                t=settle_t,
+                x=last_frame.x,
+                y=target_y,
+                vx=0.0,
+                vy=max(0.0, last_frame.vy)
+            ))
+            ball["x"] = last_frame.x
+            ball["y"] = slot_floor
 
     slot_index = -1
     slot_center_x = None
