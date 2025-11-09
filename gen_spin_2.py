@@ -96,6 +96,9 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
     rng, seed = seed_rng(seed)
     pins = build_pin_grid()
     geometry = slot_geometry(pins)
+    slot_y = geometry["slot_y"]
+    slot_height = geometry["slot_height"]
+    slot_floor = slot_y + slot_height
 
     start_x = DISPLAY_WIDTH / 2 + (rng.random() - 0.5) * 26
     start_y = 20.0
@@ -117,10 +120,6 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
         ))
 
     push_frame()
-
-    slot_y = geometry["slot_y"]
-    slot_height = geometry["slot_height"]
-    slot_floor = slot_y + slot_height
 
     while True:
         prev_x = ball["x"]
@@ -278,6 +277,7 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
     )
 
     if not have_touch:
+        # перегенерация с новым seed
         new_seed = secrets.token_hex(16)
         return generate_plinko_scenario(bet, new_seed)
 
@@ -293,6 +293,5 @@ def start_data():
         "DISPLAY_HEIGHT": DISPLAY_HEIGHT,
         "GRAVITY": GRAVITY,
         "FRICTION": FRICTION,
-        "BOUNCE": BOUNCE,
-        "TIME_STEP": TIME_STEP
+        "BOUNCE": BOUNCE
     }
