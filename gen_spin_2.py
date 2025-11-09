@@ -14,7 +14,7 @@ DISPLAY_HEIGHT = 800
 
 GRAVITY = 0.6
 FRICTION = 0.95
-BOUNCE = 0.6
+BOUNCE = 0.7
 
 TIME_STEP = 0.06  # шаг интеграции (сек.)
 
