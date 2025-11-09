@@ -12,11 +12,11 @@ PIN_RADIUS = 8
 DISPLAY_WIDTH = 800
 DISPLAY_HEIGHT = 800
 
-GRAVITY = 1.1
+GRAVITY = 0.8
 FRICTION = 0.6
-BOUNCE = 1
+BOUNCE = 0.8
 
-TIME_STEP = 0.1  # шаг интеграции (сек.)
+TIME_STEP = 0.15  # шаг интеграции (сек.)
 
 @dataclass
 class Frame:
