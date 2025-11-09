@@ -799,11 +799,11 @@ async def ttt():
     sacha = 980627987
 
     id_evgeniyshow = 194092787
-    # dd = await start_data_0()
-    # print(dd)
+    dd = await test_post(10)
+    print(dd)
 
 
     pass
 
-# asyncio.get_event_loop().run_until_complete(ttt())
+asyncio.get_event_loop().run_until_complete(ttt())
 
