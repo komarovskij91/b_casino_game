@@ -6,7 +6,7 @@ from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional, Tuple, Any
 
 ROWS = 11
-MULTIPLIERS = [8, 5, 3, 1.5, 0.8, 0.6, 0.4, 0.6, 0.8, 1.5, 3, 5, 8]
+MULTIPLIERS = [15, 8, 3, 2, 0.8, 0.6, 0.4, 0.6, 0.8, 2, 5, 8, 15]
 BALL_RADIUS = 9
 PIN_RADIUS = 7
 DISPLAY_WIDTH = 800
@@ -14,7 +14,7 @@ DISPLAY_HEIGHT = 800
 
 GRAVITY = 0.6
 FRICTION = 0.95
-BOUNCE = 0.6
+BOUNCE = 0.66
 
 TIME_STEP = 0.06  # шаг интеграции (сек.)
 
