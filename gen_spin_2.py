@@ -7,8 +7,8 @@ from typing import Dict, List, Optional, Tuple, Any
 
 ROWS = 11
 MULTIPLIERS = [8, 5, 3, 1.5, 0.8, 0.6, 0.4, 0.6, 0.8, 1.5, 3, 5, 8]
-BALL_RADIUS = 7
-PIN_RADIUS = 8
+BALL_RADIUS = 9
+PIN_RADIUS = 7
 DISPLAY_WIDTH = 800
 DISPLAY_HEIGHT = 800
 
