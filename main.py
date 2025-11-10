@@ -109,16 +109,25 @@ def check_webapp_signature_from_init_data(init_data: str, token=None) -> bool:
     """
     try:
         # Используем токен напрямую из кода для тестирования
-        if token is None:
-            bot_token = "8036216160:AAHwGBXCA-SWBGP6GqC8dd4uJX1q-RnR0NE"
-        else:
+        # Сначала пробуем переданный токен, потом из config, потом хардкодный
+        if token is not None:
             bot_token = token.strip()
-            if bot_token.startswith("Bot "):
-                bot_token = bot_token[4:]
-            if bot_token.startswith("bot "):
-                bot_token = bot_token[4:]
+        else:
+            # Пробуем токен из config (возможно, мини-приложение создано для этого бота)
+            try:
+                bot_token = config.TG_BOT_TOKEN.strip()
+                print(f"DEBUG: Using token from config (length: {len(bot_token)}, preview: {bot_token[:15]}...)")
+            except:
+                # Если config недоступен, используем хардкодный токен
+                bot_token = "8036216160:AAHwGBXCA-SWBGP6GqC8dd4uJX1q-RnR0NE"
+                print(f"DEBUG: Using hardcoded token (length: {len(bot_token)}, preview: {bot_token[:15]}...)")
         
-        print(f"DEBUG: Using bot_token (length: {len(bot_token)}, preview: {bot_token[:15]}...)")
+        if bot_token.startswith("Bot "):
+            bot_token = bot_token[4:]
+        if bot_token.startswith("bot "):
+            bot_token = bot_token[4:]
+        
+        print(f"DEBUG: Final bot_token (length: {len(bot_token)}, preview: {bot_token[:15]}...)")
         
         # Парсим init_data используя parse_qsl - это декодирует URL-encoded значения
         # Это ключевое отличие от предыдущего подхода!
@@ -134,8 +143,13 @@ def check_webapp_signature_from_init_data(init_data: str, token=None) -> bool:
         # Удаляем signature, если есть (он не участвует в проверке)
         parsed_data.pop('signature', None)
         
+        # ВАЖНО: В старом коде user остается как строка (не распарсена)
+        # parse_qsl уже декодировал URL-encoding, но user - это JSON строка
+        # Используем ее как есть для проверки подписи
+        
         # Формируем строку для проверки подписи из ДЕКОДИРОВАННЫХ значений
         # Это ключевое отличие - используем декодированные значения из parse_qsl!
+        # user остается как JSON строка (не объект)
         data_check_string = "\n".join(
             f"{k}={v}" for k, v in sorted(parsed_data.items(), key=itemgetter(0))
         )
