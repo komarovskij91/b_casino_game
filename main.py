@@ -359,9 +359,23 @@ async def api_v2(request: model.Request):
             # Она использует parsed_data с сохраненной JSON строкой user
             # Создаем копию parsed_data для проверки (чтобы не изменять оригинал)
             parsed_data_for_check = parsed_data.copy()
-            # Используем хардкодный токен
-            bot_token = "8036216160:AAHwGBXCA-SWBGP6GqC8dd4uJX1q-RnR0NE"
+            # Пробуем сначала токен из config (возможно, мини-приложение создано для этого бота)
+            try:
+                bot_token = config.TG_BOT_TOKEN.strip()
+                print(f"DEBUG: Trying token from config: {bot_token[:15]}...")
+            except:
+                # Если config недоступен, используем хардкодный токен
+                bot_token = "8036216160:AAHwGBXCA-SWBGP6GqC8dd4uJX1q-RnR0NE"
+                print(f"DEBUG: Using hardcoded token: {bot_token[:15]}...")
+            
             signature_valid = check_webapp_signature(parsed_data_for_check, bot_token)
+            
+            # Если не прошло с токеном из config, пробуем хардкодный
+            if not signature_valid and bot_token != "8036216160:AAHwGBXCA-SWBGP6GqC8dd4uJX1q-RnR0NE":
+                print("DEBUG: Signature failed with config token, trying hardcoded token...")
+                parsed_data_for_check2 = parsed_data.copy()
+                hardcoded_token = "8036216160:AAHwGBXCA-SWBGP6GqC8dd4uJX1q-RnR0NE"
+                signature_valid = check_webapp_signature(parsed_data_for_check2, hardcoded_token)
             
             if not signature_valid:
                 print("ERROR: Invalid signature")
