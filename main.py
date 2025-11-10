@@ -92,27 +92,38 @@ def raise_response(req: dict, status_code=200, message=""):
 ########### V1 #######################
 # Only telegram autenticated request #
 
-def check_webapp_signature_from_init_data(init_data: str, token=config.TG_BOT_TOKEN) -> bool:
+def check_webapp_signature_from_init_data(init_data: str, token=None) -> bool:
     """
     Проверяет подпись напрямую по оригинальной строке init_data.
     Реализация согласно официальной документации Telegram:
     https://core.telegram.org/bots/webapps#validating-data-received-via-the-web-app
+    
+    Алгоритм:
+    1. Парсим init_data и извлекаем hash
+    2. Формируем data_check_string из всех полей кроме hash, отсортированных по ключу
+    3. Вычисляем secret_key = HMAC-SHA256("WebAppData", bot_token)
+    4. Вычисляем calculated_hash = HMAC-SHA256(secret_key, data_check_string)
+    5. Сравниваем calculated_hash с полученным hash
     """
     try:
-        # Убеждаемся, что токен правильный (без префикса "Bot " если есть)
-        bot_token = token.strip()
-        if bot_token.startswith("Bot "):
-            bot_token = bot_token[4:]
-        if bot_token.startswith("bot "):
-            bot_token = bot_token[4:]
+        # Используем токен напрямую из кода для тестирования
+        if token is None:
+            bot_token = "8036216160:AAHwGBXCA-SWBGP6GqC8dd4uJX1q-RnR0NE"
+        else:
+            bot_token = token.strip()
+            if bot_token.startswith("Bot "):
+                bot_token = bot_token[4:]
+            if bot_token.startswith("bot "):
+                bot_token = bot_token[4:]
         
-        print(f"DEBUG: Using bot_token (length: {len(bot_token)}, preview: {bot_token[:10]}...)")
+        print(f"DEBUG: Using bot_token (length: {len(bot_token)}, preview: {bot_token[:15]}...)")
         
-        # Парсим init_data напрямую из строки
-        parsed_dict = {}
+        # Парсим init_data используя parse_qsl для правильной обработки URL-encoding
+        # Но нам нужны ОРИГИНАЛЬНЫЕ значения из строки, не декодированные
+        pairs = []
         hash_value = None
         
-        # Разбиваем по & и извлекаем пары ключ=значение
+        # Парсим напрямую из строки, сохраняя оригинальные значения
         parts = init_data.split('&')
         for part in parts:
             if '=' not in part:
@@ -123,7 +134,7 @@ def check_webapp_signature_from_init_data(init_data: str, token=config.TG_BOT_TO
             elif key == 'signature':
                 continue  # signature не участвует в проверке
             else:
-                parsed_dict[key] = value
+                pairs.append((key, value))
         
         if hash_value is None:
             print("ERROR: Hash is not present in init_data")
@@ -133,24 +144,16 @@ def check_webapp_signature_from_init_data(init_data: str, token=config.TG_BOT_TO
         # Все поля кроме hash и signature, отсортированные по ключу
         # ВАЖНО: используем оригинальные URL-encoded значения из init_data
         data_check_string = "\n".join(
-            f"{k}={v}" for k, v in sorted(parsed_dict.items(), key=itemgetter(0))
+            f"{k}={v}" for k, v in sorted(pairs, key=itemgetter(0))
         )
         
-        # Также пробуем вариант с декодированными значениями (для отладки)
-        from urllib.parse import unquote
-        decoded_dict = {k: unquote(v) for k, v in parsed_dict.items()}
-        data_check_string_decoded = "\n".join(
-            f"{k}={v}" for k, v in sorted(decoded_dict.items(), key=itemgetter(0))
-        )
-        print(f"DEBUG: Alternative decoded data_check_string length: {len(data_check_string_decoded)}")
-        print(f"DEBUG: Alternative decoded data_check_string:\n{data_check_string_decoded}")
-        
-        print(f"DEBUG: Direct check - data_check_string length: {len(data_check_string)}")
-        print(f"DEBUG: Direct check - data_check_string:\n{data_check_string}")
-        print(f"DEBUG: Direct check - hash from init_data: {hash_value}")
-        print(f"DEBUG: Direct check - keys in data_check_string: {sorted(parsed_dict.keys())}")
+        print(f"DEBUG: data_check_string length: {len(data_check_string)}")
+        print(f"DEBUG: data_check_string:\n{data_check_string}")
+        print(f"DEBUG: hash from init_data: {hash_value}")
+        print(f"DEBUG: keys in data_check_string: {sorted([k for k, v in pairs])}")
         
         # Вычисляем секретный ключ: HMAC-SHA256("WebAppData", bot_token)
+        # Согласно документации: secret_key = HMAC-SHA256("WebAppData", bot_token)
         secret_key = hmac.new(
             key=b"WebAppData",
             msg=bot_token.encode('utf-8'),
@@ -166,38 +169,18 @@ def check_webapp_signature_from_init_data(init_data: str, token=config.TG_BOT_TO
         
         is_valid = calculated_hash == hash_value
         
-        # Если не прошло, пробуем альтернативные варианты
-        if not is_valid:
-            print(f"DEBUG: Token used: {bot_token[:20]}... (full length: {len(bot_token)})")
-            print(f"DEBUG: Secret key (first 16 bytes hex): {secret_key[:16].hex()}")
-            
-            # Пробуем вариант с токеном как есть (может быть проблема с форматом)
-            print("DEBUG: Trying alternative token formats...")
-            
-            # Вариант 1: токен с префиксом "Bot "
-            alt_token1 = f"Bot {bot_token}"
-            alt_secret1 = hmac.new(key=b"WebAppData", msg=alt_token1.encode('utf-8'), digestmod=hashlib.sha256).digest()
-            alt_hash1 = hmac.new(key=alt_secret1, msg=data_check_string.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
-            print(f"DEBUG: Alt1 (Bot prefix) - calculated: {alt_hash1}, valid: {alt_hash1 == hash_value}")
-            
-            # Вариант 2: только часть токена до двоеточия (если есть)
-            if ':' in bot_token:
-                alt_token2 = bot_token.split(':')[0]
-                alt_secret2 = hmac.new(key=b"WebAppData", msg=alt_token2.encode('utf-8'), digestmod=hashlib.sha256).digest()
-                alt_hash2 = hmac.new(key=alt_secret2, msg=data_check_string.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
-                print(f"DEBUG: Alt2 (before colon) - calculated: {alt_hash2}, valid: {alt_hash2 == hash_value}")
-            
-            # Вариант 3: с декодированными значениями в data_check_string
-            alt_hash3 = hmac.new(
-                key=secret_key,
-                msg=data_check_string_decoded.encode('utf-8'),
-                digestmod=hashlib.sha256
-            ).hexdigest()
-            print(f"DEBUG: Alt3 (decoded values) - calculated: {alt_hash3}, valid: {alt_hash3 == hash_value}")
+        print(f"DEBUG: calculated_hash: {calculated_hash}")
+        print(f"DEBUG: received_hash: {hash_value}")
+        print(f"DEBUG: valid: {is_valid}")
         
-        print(f"DEBUG: Direct check - calculated: {calculated_hash}")
-        print(f"DEBUG: Direct check - received: {hash_value}")
-        print(f"DEBUG: Direct check - valid: {is_valid}")
+        if not is_valid:
+            print(f"DEBUG: Token used: {bot_token[:25]}... (full length: {len(bot_token)})")
+            print(f"DEBUG: Secret key (first 16 bytes hex): {secret_key[:16].hex()}")
+            print(f"DEBUG: WARNING: Signature validation failed!")
+            print(f"DEBUG: This might indicate:")
+            print(f"DEBUG:   1. Wrong bot token")
+            print(f"DEBUG:   2. Data was modified")
+            print(f"DEBUG:   3. Time expired (auth_date too old)")
         
         return is_valid
     except Exception as e:
@@ -367,7 +350,8 @@ async def api_v2(request: model.Request):
         print("DEBUG: Checking signature...")
         try:
             # Используем прямую проверку по оригинальной строке - это более надежно
-            signature_valid = check_webapp_signature_from_init_data(request.qhc, config.TG_BOT_TOKEN)
+            # Передаем None, чтобы использовался хардкодный токен из функции
+            signature_valid = check_webapp_signature_from_init_data(request.qhc, None)
             
             if not signature_valid:
                 print("ERROR: Invalid signature")
