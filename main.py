@@ -159,8 +159,7 @@ async def api_v3(request: model.Request):
     # Методы, которые НЕ требуют qhc/initData и проверки подписи
     public_methods = {
         "start_data",
-        "test_post",
-        "test_qhc",
+        "test_post"
         "telega_rega_bot",  # этот часто вызывается не из миниаппа, оставим публичным
     }
 
@@ -232,17 +231,6 @@ async def api_v3(request: model.Request):
             observe_request_metrics(method_name, endpoint, 200, started_at)
             return {"ok": True, "req": req_obj}
 
-        if method_name == "telega_rega_bot":
-            await rega_new_user(request.params["id_telega"], request.params["data"])
-            observe_request_metrics(method_name, endpoint, 200, started_at)
-            return {"status": "ok"}
-
-        # Пример защищённого метода (нужен qhc + подпись)
-        if method_name == "test_while":
-            # если тебе нужен явный вызов test_while из API
-            response = await test_while()
-            observe_request_metrics(method_name, endpoint, 200, started_at)
-            return response
 
         # TODO: сюда же добавишь остальные методы игры:
         # if method_name == "myprof":
