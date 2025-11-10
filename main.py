@@ -352,12 +352,16 @@ async def api_v2(request: model.Request):
             traceback.print_exc()
             raise HTTPException(status_code=400, detail=f"Error parsing qhc: {str(e)}")
         
-        # Проверяем подпись напрямую по оригинальной строке init_data
+        # Проверяем подпись используя старую рабочую функцию
         print("DEBUG: Checking signature...")
         try:
-            # Используем прямую проверку по оригинальной строке - это более надежно
-            # Передаем None, чтобы использовался хардкодный токен из функции
-            signature_valid = check_webapp_signature_from_init_data(request.qhc, None)
+            # Используем старую функцию check_webapp_signature, которая работала
+            # Она использует parsed_data с сохраненной JSON строкой user
+            # Создаем копию parsed_data для проверки (чтобы не изменять оригинал)
+            parsed_data_for_check = parsed_data.copy()
+            # Используем хардкодный токен
+            bot_token = "8036216160:AAHwGBXCA-SWBGP6GqC8dd4uJX1q-RnR0NE"
+            signature_valid = check_webapp_signature(parsed_data_for_check, bot_token)
             
             if not signature_valid:
                 print("ERROR: Invalid signature")
