@@ -261,6 +261,7 @@ async def chek_new_param(id_telegram, user_data):
 
 
 async def update_login_streak(id_telega):
+
     """
     Обновляет дневной стрик посещений игрока.
     Если день тот же — ничего не меняем.
