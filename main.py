@@ -95,30 +95,51 @@ def raise_response(req: dict, status_code=200, message=""):
 def check_webapp_signature_from_init_data(init_data: str, token=config.TG_BOT_TOKEN) -> bool:
     """
     Проверяет подпись напрямую по оригинальной строке init_data.
-    Это более надежный способ, так как не зависит от парсинга.
+    Использует оригинальные URL-encoded значения для проверки подписи.
     """
     try:
-        # Парсим init_data
-        parsed = dict(parse_qsl(init_data))
+        # Парсим init_data, но сохраняем оригинальные значения
+        # parse_qsl декодирует URL-encoding, но нам нужны оригинальные значения для проверки подписи
+        pairs = parse_qsl(init_data, keep_blank_values=True)
         
-        if "hash" not in parsed:
+        # Извлекаем hash и signature отдельно
+        hash_value = None
+        data_pairs = []
+        
+        for key, value in pairs:
+            if key == 'hash':
+                hash_value = value
+            elif key != 'signature':  # signature не участвует в проверке
+                # Сохраняем оригинальную пару ключ-значение
+                # Но нужно найти оригинальное значение из init_data строки
+                data_pairs.append((key, value))
+        
+        if hash_value is None:
             print("ERROR: Hash is not present in init_data")
             return False
         
-        hash_ = parsed.pop('hash')
+        # Теперь нужно восстановить оригинальные URL-encoded значения из init_data
+        # Для этого парсим init_data как строку напрямую
+        parsed_dict = {}
+        parts = init_data.split('&')
+        for part in parts:
+            if '=' in part:
+                key, value = part.split('=', 1)
+                if key == 'hash':
+                    continue  # hash уже извлечен
+                elif key == 'signature':
+                    continue  # signature не участвует
+                else:
+                    parsed_dict[key] = value
         
-        # Удаляем signature, если есть
-        if 'signature' in parsed:
-            parsed.pop('signature')
-        
-        # Формируем строку для проверки подписи
-        # user уже декодирован из URL-encoding через parse_qsl
+        # Формируем строку для проверки подписи из оригинальных URL-encoded значений
         data_check_string = "\n".join(
-            f"{k}={v}" for k, v in sorted(parsed.items(), key=itemgetter(0))
+            f"{k}={v}" for k, v in sorted(parsed_dict.items(), key=itemgetter(0))
         )
         
         print(f"DEBUG: Direct check - data_check_string length: {len(data_check_string)}")
         print(f"DEBUG: Direct check - data_check_string:\n{data_check_string}")
+        print(f"DEBUG: Direct check - hash from init_data: {hash_value}")
         
         secret_key = hmac.new(
             key=b"WebAppData", msg=token.encode(), digestmod=hashlib.sha256
@@ -127,8 +148,8 @@ def check_webapp_signature_from_init_data(init_data: str, token=config.TG_BOT_TO
             key=secret_key.digest(), msg=data_check_string.encode(), digestmod=hashlib.sha256
         ).hexdigest()
         
-        is_valid = calculated_hash == hash_
-        print(f"DEBUG: Direct check - calculated: {calculated_hash}, received: {hash_}, valid: {is_valid}")
+        is_valid = calculated_hash == hash_value
+        print(f"DEBUG: Direct check - calculated: {calculated_hash}, received: {hash_value}, valid: {is_valid}")
         
         return is_valid
     except Exception as e:
