@@ -116,11 +116,16 @@ def check_webapp_signature(parsed_data: dict, token=config.TG_BOT_TOKEN) -> bool
             data_copy.pop('signature')
             print("DEBUG: Removed 'signature' field from data_check_string (not used in signature verification)")
         
-        # ВАЖНО: user должен быть строкой JSON, а не объектом!
-        # Если user уже распарсен в объект, нужно преобразовать обратно в строку
-        if 'user' in data_copy and isinstance(data_copy['user'], dict):
+        # ВАЖНО: user должен быть оригинальной URL-encoded строкой из init_data!
+        # Используем сохраненную оригинальную строку, если она есть
+        if '_user_raw' in data_copy:
+            data_copy['user'] = data_copy.pop('_user_raw')
+            print(f"DEBUG: Using original URL-encoded user string for signature check (length: {len(data_copy['user'])})")
+            print(f"DEBUG: Original user string preview: {data_copy['user'][:100]}...")
+        elif 'user' in data_copy and isinstance(data_copy['user'], dict):
+            # Fallback: если оригинальной строки нет, преобразуем обратно в JSON
             data_copy['user'] = json.dumps(data_copy['user'], separators=(',', ':'))
-            print("DEBUG: Converted user dict back to JSON string for signature check")
+            print("DEBUG: Converted user dict back to JSON string for signature check (fallback)")
         
         # Формируем строку для проверки подписи (только поля без hash и signature)
         data_check_string = "\n".join(
@@ -157,10 +162,27 @@ def parse_user_query(init_data: str, req):
     """
     Парсит init_data и возвращает распарсенные данные.
     Выбрасывает HTTPException при ошибке вместо использования raise_response.
+    Сохраняет оригинальную строку user для проверки подписи.
     """
     try:
+        # Извлекаем оригинальную строку user из init_data ДО парсинга
+        # Ищем "user=" и берем значение до следующего "&" или конца строки
+        user_raw = None
+        if 'user=' in init_data:
+            start = init_data.find('user=')
+            end = init_data.find('&', start + 5)
+            if end == -1:
+                end = len(init_data)
+            user_raw = init_data[start + 5:end]
+            print(f"DEBUG: Extracted original user string (length: {len(user_raw)})")
+        
         parsed_data = dict(parse_qsl(init_data))
         parsed_data['user'] = json.loads(parsed_data['user'])
+        
+        # Сохраняем оригинальную URL-encoded строку для проверки подписи
+        if user_raw:
+            parsed_data['_user_raw'] = user_raw
+        
         print(f"DEBUG: parse_user_query succeeded, user_id: {parsed_data.get('user', {}).get('id', 'unknown')}")
     except ValueError as e:
         print(f"ERROR: ValueError in parse_user_query: {str(e)}")
