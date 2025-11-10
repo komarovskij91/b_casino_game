@@ -109,18 +109,14 @@ def check_webapp_signature_from_init_data(init_data: str, token=None) -> bool:
     """
     try:
         # Используем токен напрямую из кода для тестирования
-        # Сначала пробуем переданный токен, потом из config, потом хардкодный
+        # Сначала пробуем переданный токен, потом хардкодный (который указал пользователь)
         if token is not None:
             bot_token = token.strip()
         else:
-            # Пробуем токен из config (возможно, мини-приложение создано для этого бота)
-            try:
-                bot_token = config.TG_BOT_TOKEN.strip()
-                print(f"DEBUG: Using token from config (length: {len(bot_token)}, preview: {bot_token[:15]}...)")
-            except:
-                # Если config недоступен, используем хардкодный токен
-                bot_token = "8036216160:AAHwGBXCA-SWBGP6GqC8dd4uJX1q-RnR0NE"
-                print(f"DEBUG: Using hardcoded token (length: {len(bot_token)}, preview: {bot_token[:15]}...)")
+            # Используем хардкодный токен, который указал пользователь
+            # Это токен бота, для которого создано мини-приложение
+            bot_token = "8036216160:AAHwGBXCA-SWBGP6GqC8dd4uJX1q-RnR0NE"
+            print(f"DEBUG: Using hardcoded token (length: {len(bot_token)}, preview: {bot_token[:15]}...)")
         
         if bot_token.startswith("Bot "):
             bot_token = bot_token[4:]
