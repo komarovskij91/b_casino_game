@@ -247,6 +247,7 @@ async def api_v2(request: model.Request):
 
 
     if request.method == "test_qhc":
+        print("метод test_qhc")
         # qq = parse_user_query(request.qhc, req)
         # print(qq)
         print(request)
