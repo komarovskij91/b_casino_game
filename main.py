@@ -142,6 +142,8 @@ async def v3_get():
 # -----------------------------
 @app.post("/v3")
 async def api_v3(request: model.Request):
+    print("Получен запрос:", request.model_dump())
+    print("request.qhc", request.qhc)
     """
     Универсальный эндпоинт под TMA:
     - request.method  — имя метода (start_data, test_qhc, myprof, ...)
@@ -201,6 +203,7 @@ async def api_v3(request: model.Request):
         logger.debug("Public method %s, skip initData auth", method_name)
 
     # Объект, который можно возвращать в отладочных методах
+
     req_obj = {
         "method": method_name,
         "params": request.params,
