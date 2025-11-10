@@ -92,6 +92,51 @@ def raise_response(req: dict, status_code=200, message=""):
 ########### V1 #######################
 # Only telegram autenticated request #
 
+def check_webapp_signature_from_init_data(init_data: str, token=config.TG_BOT_TOKEN) -> bool:
+    """
+    Проверяет подпись напрямую по оригинальной строке init_data.
+    Это более надежный способ, так как не зависит от парсинга.
+    """
+    try:
+        # Парсим init_data
+        parsed = dict(parse_qsl(init_data))
+        
+        if "hash" not in parsed:
+            print("ERROR: Hash is not present in init_data")
+            return False
+        
+        hash_ = parsed.pop('hash')
+        
+        # Удаляем signature, если есть
+        if 'signature' in parsed:
+            parsed.pop('signature')
+        
+        # Формируем строку для проверки подписи
+        # user уже декодирован из URL-encoding через parse_qsl
+        data_check_string = "\n".join(
+            f"{k}={v}" for k, v in sorted(parsed.items(), key=itemgetter(0))
+        )
+        
+        print(f"DEBUG: Direct check - data_check_string length: {len(data_check_string)}")
+        print(f"DEBUG: Direct check - data_check_string:\n{data_check_string}")
+        
+        secret_key = hmac.new(
+            key=b"WebAppData", msg=token.encode(), digestmod=hashlib.sha256
+        )
+        calculated_hash = hmac.new(
+            key=secret_key.digest(), msg=data_check_string.encode(), digestmod=hashlib.sha256
+        ).hexdigest()
+        
+        is_valid = calculated_hash == hash_
+        print(f"DEBUG: Direct check - calculated: {calculated_hash}, received: {hash_}, valid: {is_valid}")
+        
+        return is_valid
+    except Exception as e:
+        print(f"ERROR: Exception in check_webapp_signature_from_init_data: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False
+
 def check_webapp_signature(parsed_data: dict, token=config.TG_BOT_TOKEN) -> bool:
     """
     Check incoming WebApp init data signature
@@ -249,12 +294,11 @@ async def api_v2(request: model.Request):
             traceback.print_exc()
             raise HTTPException(status_code=400, detail=f"Error parsing qhc: {str(e)}")
         
-        # Проверяем подпись (ВАЖНО: создаем копию, так как check_webapp_signature может изменить данные)
+        # Проверяем подпись напрямую по оригинальной строке init_data
         print("DEBUG: Checking signature...")
         try:
-            # Создаем копию для проверки подписи
-            parsed_data_copy = parsed_data.copy()
-            signature_valid = check_webapp_signature(parsed_data_copy, config.TG_BOT_TOKEN)
+            # Используем прямую проверку по оригинальной строке - это более надежно
+            signature_valid = check_webapp_signature_from_init_data(request.qhc, config.TG_BOT_TOKEN)
             
             if not signature_valid:
                 print("ERROR: Invalid signature")
