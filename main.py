@@ -95,15 +95,17 @@ def raise_response(req: dict, status_code=200, message=""):
 def check_webapp_signature_from_init_data(init_data: str, token=None) -> bool:
     """
     Проверяет подпись напрямую по оригинальной строке init_data.
-    Реализация согласно официальной документации Telegram:
-    https://core.telegram.org/bots/webapps#validating-data-received-via-the-web-app
+    Реализация согласно старому рабочему варианту:
+    Использует parse_qsl для декодирования значений, затем формирует data_check_string
+    из декодированных значений (как в старом рабочем коде).
     
-    Алгоритм:
-    1. Парсим init_data и извлекаем hash
-    2. Формируем data_check_string из всех полей кроме hash, отсортированных по ключу
-    3. Вычисляем secret_key = HMAC-SHA256("WebAppData", bot_token)
-    4. Вычисляем calculated_hash = HMAC-SHA256(secret_key, data_check_string)
-    5. Сравниваем calculated_hash с полученным hash
+    Алгоритм (как в старом варианте):
+    1. Парсим init_data через parse_qsl (декодирует URL-encoded значения)
+    2. Извлекаем hash
+    3. Формируем data_check_string из всех полей кроме hash, отсортированных по ключу
+    4. Вычисляем secret_key = HMAC-SHA256("WebAppData", bot_token)
+    5. Вычисляем calculated_hash = HMAC-SHA256(secret_key, data_check_string)
+    6. Сравниваем calculated_hash с полученным hash
     """
     try:
         # Используем токен напрямую из кода для тестирования
@@ -118,51 +120,43 @@ def check_webapp_signature_from_init_data(init_data: str, token=None) -> bool:
         
         print(f"DEBUG: Using bot_token (length: {len(bot_token)}, preview: {bot_token[:15]}...)")
         
-        # Парсим init_data используя parse_qsl для правильной обработки URL-encoding
-        # Но нам нужны ОРИГИНАЛЬНЫЕ значения из строки, не декодированные
-        pairs = []
-        hash_value = None
+        # Парсим init_data используя parse_qsl - это декодирует URL-encoded значения
+        # Это ключевое отличие от предыдущего подхода!
+        parsed_data = dict(parse_qsl(init_data, keep_blank_values=True))
         
-        # Парсим напрямую из строки, сохраняя оригинальные значения
-        parts = init_data.split('&')
-        for part in parts:
-            if '=' not in part:
-                continue
-            key, value = part.split('=', 1)  # split только по первому =
-            if key == 'hash':
-                hash_value = value
-            elif key == 'signature':
-                continue  # signature не участвует в проверке
-            else:
-                pairs.append((key, value))
-        
-        if hash_value is None:
+        if "hash" not in parsed_data:
             print("ERROR: Hash is not present in init_data")
             return False
         
-        # Формируем строку для проверки подписи
-        # Все поля кроме hash и signature, отсортированные по ключу
-        # ВАЖНО: используем оригинальные URL-encoded значения из init_data
+        # Извлекаем hash (как в старом варианте)
+        hash_value = parsed_data.pop('hash')
+        
+        # Удаляем signature, если есть (он не участвует в проверке)
+        parsed_data.pop('signature', None)
+        
+        # Формируем строку для проверки подписи из ДЕКОДИРОВАННЫХ значений
+        # Это ключевое отличие - используем декодированные значения из parse_qsl!
         data_check_string = "\n".join(
-            f"{k}={v}" for k, v in sorted(pairs, key=itemgetter(0))
+            f"{k}={v}" for k, v in sorted(parsed_data.items(), key=itemgetter(0))
         )
         
         print(f"DEBUG: data_check_string length: {len(data_check_string)}")
         print(f"DEBUG: data_check_string:\n{data_check_string}")
         print(f"DEBUG: hash from init_data: {hash_value}")
-        print(f"DEBUG: keys in data_check_string: {sorted([k for k, v in pairs])}")
+        print(f"DEBUG: keys in data_check_string: {sorted(parsed_data.keys())}")
         
         # Вычисляем секретный ключ: HMAC-SHA256("WebAppData", bot_token)
-        # Согласно документации: secret_key = HMAC-SHA256("WebAppData", bot_token)
+        # Как в старом варианте
         secret_key = hmac.new(
             key=b"WebAppData",
             msg=bot_token.encode('utf-8'),
             digestmod=hashlib.sha256
-        ).digest()
+        )
         
         # Вычисляем hash: HMAC-SHA256(secret_key, data_check_string)
+        # Как в старом варианте
         calculated_hash = hmac.new(
-            key=secret_key,
+            key=secret_key.digest(),
             msg=data_check_string.encode('utf-8'),
             digestmod=hashlib.sha256
         ).hexdigest()
@@ -175,12 +169,14 @@ def check_webapp_signature_from_init_data(init_data: str, token=None) -> bool:
         
         if not is_valid:
             print(f"DEBUG: Token used: {bot_token[:25]}... (full length: {len(bot_token)})")
-            print(f"DEBUG: Secret key (first 16 bytes hex): {secret_key[:16].hex()}")
+            print(f"DEBUG: Secret key (first 16 bytes hex): {secret_key.digest()[:16].hex()}")
             print(f"DEBUG: WARNING: Signature validation failed!")
             print(f"DEBUG: This might indicate:")
             print(f"DEBUG:   1. Wrong bot token")
             print(f"DEBUG:   2. Data was modified")
             print(f"DEBUG:   3. Time expired (auth_date too old)")
+        else:
+            print("DEBUG: SUCCESS! Signature validation passed!")
         
         return is_valid
     except Exception as e:
