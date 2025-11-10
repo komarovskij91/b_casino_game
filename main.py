@@ -110,13 +110,19 @@ def check_webapp_signature(parsed_data: dict, token=config.TG_BOT_TOKEN) -> bool
         
         hash_ = data_copy.pop('hash')
         
+        # ВАЖНО: signature не должен участвовать в проверке подписи!
+        # Удаляем signature, если он есть
+        if 'signature' in data_copy:
+            data_copy.pop('signature')
+            print("DEBUG: Removed 'signature' field from data_check_string (not used in signature verification)")
+        
         # ВАЖНО: user должен быть строкой JSON, а не объектом!
         # Если user уже распарсен в объект, нужно преобразовать обратно в строку
         if 'user' in data_copy and isinstance(data_copy['user'], dict):
             data_copy['user'] = json.dumps(data_copy['user'], separators=(',', ':'))
             print("DEBUG: Converted user dict back to JSON string for signature check")
         
-        # Формируем строку для проверки подписи
+        # Формируем строку для проверки подписи (только поля без hash и signature)
         data_check_string = "\n".join(
             f"{k}={v}" for k, v in sorted(data_copy.items(), key=itemgetter(0))
         )
@@ -208,7 +214,7 @@ async def api_v2(request: model.Request):
     print(f"DEBUG: Received request method: {request.method}")
     
     # Методы, которые могут работать без аутентификации
-    public_methods = ["start_data"]
+    public_methods = ["start_data", "test_post"]
     
     # Проверяем qhc перед обработкой запроса (кроме публичных методов)
     if request.method not in public_methods:
@@ -276,17 +282,7 @@ async def api_v2(request: model.Request):
         }
     
     if request.method == "test_post":
-        # Для test_post qhc может быть пустым, но если есть - проверяем
-        if request.qhc and len(request.qhc.strip()) > 0:
-            try:
-                parsed_data = parse_user_query(request.qhc, request)
-                parsed_data_copy = parsed_data.copy()
-                if not check_webapp_signature(parsed_data_copy, config.TG_BOT_TOKEN):
-                    raise HTTPException(status_code=401, detail="Invalid signature")
-            except HTTPException:
-                raise
-            except Exception:
-                pass  # Если ошибка парсинга, продолжаем без аутентификации
+        # test_post - публичный метод, не требует аутентификации
         return await test_post(spin=req["params"]["spin"])
     
     if request.method == "start_data":
