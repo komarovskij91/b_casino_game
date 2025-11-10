@@ -1,25 +1,27 @@
 import logging
 import json
-import threading
 import hashlib
 import hmac
 from urllib.parse import parse_qsl
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app, Info, Counter, Summary
 
 import config
 import models as model
-from redis_aio import test_post, rega_new_user, test_while, chek_test, start_data_0
+from redis_aio import test_post, rega_new_user, chek_test, start_data_0
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# =========================
 # Prometheus metrics
+# =========================
 APP_METRIC_INFO = Info('app_version', 'A version of the application')
 APP_METRIC_INFO.info({'version': config.API_SERVICE_VERSION, 'buildhost': 'api'})
+
 APP_METRIC_REQUEST_COUNT = Counter(
     'app_requests_total',
     'Info about requests',
@@ -33,21 +35,15 @@ APP_METRIC_REQUEST_LATENCY = Summary(
 
 metrics_app = make_asgi_app()
 
+# =========================
+# FastAPI app
+# =========================
 app = FastAPI()
 
-# CORS
-origins = [
-    "https://api.dev.vikbot.pro",
-    "https://dev.vikbot.pro",
-    "http://localhost:3000",
-    "https://web.dev.vikbot.pro",
-    "https://allows-shell-rd-stereo.trycloudflare.com",
-    "https://catonback-production.up.railway.app",
-]
-
+# CORS — делаем максимально дружелюбно, чтобы не было 400 на OPTIONS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],          # если хочешь — можешь потом сузить до своих доменов
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -57,24 +53,12 @@ app.add_middleware(
 app.mount("/metrics", metrics_app)
 
 
-def raise_response(req: dict, status_code: int = 200, message: str = "") -> dict:
-    return {
-        "statusCode": status_code,
-        "body": {
-            "message": message,
-            "request": req,
-        },
-    }
-
-
 def validate_telegram_init_data(init_data: str, bot_token: str) -> dict:
     """
     Проверка подписи Telegram WebApp initData.
-    Возвращает dict без полей `hash` и `signature`,
-    если подпись корректна, иначе кидает ValueError.
+    Возвращает dict (без hash/signature), либо кидает ValueError.
     """
-
-    # Парсим query-string (значения уже декодированы из URL)
+    # Парсим query-string в dict
     data = dict(parse_qsl(init_data, keep_blank_values=True))
 
     if "hash" not in data:
@@ -84,23 +68,23 @@ def validate_telegram_init_data(init_data: str, bot_token: str) -> dict:
     # signature в подписи НЕ участвует
     data.pop("signature", None)
 
-    # Формируем data_check_string
+    # data_check_string: key=value\n, отсортировано по key
     data_check_string = "\n".join(
         f"{k}={v}" for k, v in sorted(data.items())
     )
 
-    # Секретный ключ: HMAC_SHA256("WebAppData", bot_token)
+    # secret_key = HMAC_SHA256("WebAppData", bot_token)
     secret_key = hmac.new(
         key=b"WebAppData",
         msg=bot_token.encode("utf-8"),
-        digestmod=hashlib.sha256,
+        digestmod=hashlib.sha256
     ).digest()
 
-    # Хэш
+    # calculated_hash = HMAC_SHA256(secret_key, data_check_string)
     calculated_hash = hmac.new(
         key=secret_key,
         msg=data_check_string.encode("utf-8"),
-        digestmod=hashlib.sha256,
+        digestmod=hashlib.sha256
     ).hexdigest()
 
     if not hmac.compare_digest(calculated_hash, received_hash):
@@ -116,24 +100,24 @@ async def health_check():
     return "ok"
 
 
-@app.get("/reward")
-async def reward_handler(userid: str, request: Request):
-    logger.info("Reward callback for user %s from %s", userid, request.client.host)
-    # Тут твоя логика начисления реворда
-    return {"status": "ok", "userid": userid}
-
-
 @app.post("/v3")
 async def api_v3(request: model.Request):
+    """
+    Универсальный эндпоинт под TMA:
+    - request.method  — имя метода (start_data, test_qhc, ...)
+    - request.params  — параметры
+    - request.qhc     — Telegram WebApp initData
+    """
     logger.debug("Received request method: %s", request.method)
 
-    # Методы, которые не требуют проверки подписи
-    public_methods = {"start_data", "test_post"}
+    public_methods = {"start_data", "test_post"}  # без подписи
 
-    parsed_data_for_response = None
+    parsed_init_data = None
     user_id = None
 
-    # Проверяем подпись initData для непубличных методов
+    # =========================
+    # Проверка подписи initData
+    # =========================
     if request.method not in public_methods:
         if not request.qhc or not request.qhc.strip():
             logger.error("qhc is empty")
@@ -148,7 +132,7 @@ async def api_v3(request: model.Request):
             logger.error("Invalid signature: %s", e)
             raise HTTPException(status_code=401, detail="Invalid signature")
 
-        # В initData поле user приходит как JSON-строка
+        # user в initData — JSON-строка
         user_raw = data.get("user")
         try:
             user = json.loads(user_raw) if isinstance(user_raw, str) else user_raw
@@ -157,53 +141,64 @@ async def api_v3(request: model.Request):
             raise HTTPException(status_code=400, detail="Invalid user field in initData")
 
         data["user"] = user
-        parsed_data_for_response = data
+        parsed_init_data = data
         user_id = user.get("id")
         logger.debug("Signature check passed, user_id: %s", user_id)
+    else:
+        logger.debug("Public method %s, skipping auth", request.method)
 
-    call_started = 1
+    # Базовый объект запроса, который можно возвращать в отладочных методах
     req = {
         "method": request.method,
-        "call_started": call_started,
         "params": request.params,
         "qhc": request.qhc,
-        "user": parsed_data_for_response.get("user") if parsed_data_for_response else None,
+        "init_data": parsed_init_data,
+        "user_id": user_id,
     }
 
-    # ---------- Публичные методы ----------
-    if request.method == "test_post":
-        # пример: params = {"spin": ...}
-        return await test_post(spin=req["params"]["spin"])
+    # =========================
+    # Публичные методы
+    # =========================
 
     if request.method == "start_data":
+        # стартовые данные для миниаппа
         return await start_data_0()
 
-    # ---------- Служебный метод для отладки initData ----------
+    if request.method == "test_post":
+        # Пример тестового метода с параметром spin
+        return await test_post(spin=request.params.get("spin"))
+
+    # =========================
+    # Служебный метод для проверки initData
+    # =========================
     if request.method == "test_qhc":
-        logger.info("метод test_qhc")
+        # Просто выдаём то, что распарсили
         return {
             "ok": True,
             "req": req,
-            "parsed_init_data": parsed_data_for_response,
         }
 
-    # ---------- Пример метода регистрации через бота ----------
+    # =========================
+    # Боевая логика
+    # =========================
     if request.method == "telega_rega_bot":
-        await rega_new_user(req["params"]["id_telega"], req["params"]["data"])
+        # регистрация через бота
+        await rega_new_user(request.params["id_telega"], request.params["data"])
         return {"status": "ok"}
 
-    # ---------- Фолбэк для неизвестных методов ----------
-    return {"status": "ne ok", "req": req}
+    # сюда потом добавишь свои остальные методы:
+    # if request.method == "some_method":
+    #     ...
 
-
-def run_uvicorn():
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
-
-def go_main():
-    # Для Railway достаточно просто запустить uvicorn
-    run_uvicorn()
+    # Если метода нет — вернём заглушку
+    return {
+        "status": "ne ok",
+        "error": "unknown method",
+        "req": req,
+    }
 
 
 if __name__ == "__main__":
-    go_main()
+    # Railway обычно сам запускает uvicorn, но если у тебя entrypoint = "python main.py",
+    # то так ок:
+    uvicorn.run(app, host="0.0.0.0", port=8000)
