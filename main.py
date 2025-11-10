@@ -11,7 +11,6 @@ from operator import itemgetter
 from urllib.parse import parse_qsl
 
 
-
 import config
 import models as model
 
@@ -122,37 +121,37 @@ def raise_response(req: dict, status_code=200, message=""):
 ######################################
 ########### V1 #######################
 # Only telegram autenticated request #
-def parse_user_query(init_data: str, req):
-    try:
-        parsed_data = dict(parse_qsl(init_data))
-        parsed_data['user'] = json.loads(parsed_data['user'])
-        # мое
-
-        #?
-        # logged_ = parsed_data['auth_date']
-        # if int(time.time()) - int(logged_) > int(config.AUTH_SESSION_ALIVE):
-        #     # Request is expired. Need to relogin to webapp
-        #     output = json.dumps({
-        #         "message": "Your session has expired"
-        #     })
-        #     raise_response(req, 401, output)
-
-
-    except ValueError:
-        # Init data is not a valid query string
-        output = json.dumps({
-            "message": "Init data is not a valid query string"
-        })
-        raise_response(req, 400, output)
-
-    if "hash" not in parsed_data:
-        # Hash is not present in init data
-        output = json.dumps({
-            "message": "Hash is not present in init data"
-        })
-        raise_response(req, 401, output)
-
-    return parsed_data
+# def parse_user_query(init_data: str, req):
+#     try:
+#         parsed_data = dict(parse_qsl(init_data))
+#         parsed_data['user'] = json.loads(parsed_data['user'])
+#         # мое
+#
+#         #?
+#         # logged_ = parsed_data['auth_date']
+#         # if int(time.time()) - int(logged_) > int(config.AUTH_SESSION_ALIVE):
+#         #     # Request is expired. Need to relogin to webapp
+#         #     output = json.dumps({
+#         #         "message": "Your session has expired"
+#         #     })
+#         #     raise_response(req, 401, output)
+#
+#
+#     except ValueError:
+#         # Init data is not a valid query string
+#         output = json.dumps({
+#             "message": "Init data is not a valid query string"
+#         })
+#         raise_response(req, 400, output)
+#
+#     if "hash" not in parsed_data:
+#         # Hash is not present in init data
+#         output = json.dumps({
+#             "message": "Hash is not present in init data"
+#         })
+#         raise_response(req, 401, output)
+#
+#     return parsed_data
 
 def check_webapp_signature(parsed_data: dict, token=config.TG_BOT_TOKEN) -> bool:
     """
@@ -188,6 +187,39 @@ def check_webapp_signature(parsed_data: dict, token=config.TG_BOT_TOKEN) -> bool
     return calculated_hash == hash_
 
 
+def parse_user_query(init_data: str, req):
+    """
+    Парсит init_data и возвращает распарсенные данные.
+    Выбрасывает HTTPException при ошибке вместо использования raise_response.
+    """
+    from fastapi import HTTPException
+
+    try:
+        parsed_data = dict(parse_qsl(init_data))
+        parsed_data['user'] = json.loads(parsed_data['user'])
+    except ValueError:
+        # Init data is not a valid query string
+        raise HTTPException(
+            status_code=400,
+            detail="Init data is not a valid query string"
+        )
+    except json.JSONDecodeError:
+        # User data is not valid JSON
+        raise HTTPException(
+            status_code=400,
+            detail="User data is not valid JSON"
+        )
+
+    if "hash" not in parsed_data:
+        # Hash is not present in init data
+        raise HTTPException(
+            status_code=401,
+            detail="ошибка Hash is not present in init data"
+        )
+
+    return parsed_data
+
+
 # Часть которая слушает. Она нужна одна и все
 
 @app.get("/")
@@ -217,9 +249,18 @@ async def reward_handler(userid: str, request: Request):
 
 @app.post("/v3")
 async def api_v2(request: model.Request):
-    # print("Получен запрос:", request.model_dump())
-    # print("request.qhc", request.qhc)
+    # Проверяем qhc перед обработкой запроса
+    if not request.qhc or len(request.qhc.strip()) == 0:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="qhc (initData) is required")
 
+    # Парсим qhc (теперь parse_user_query выбрасывает HTTPException)
+    parsed_data = parse_user_query(request.qhc, request)
+
+    # Проверяем подпись
+    if not check_webapp_signature(parsed_data):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Invalid signature")
 
     call_started = 1
 
