@@ -221,7 +221,7 @@ async def api_v3(request: model.Request):
 
     # запуск спина
     if request.method == "test_post":
-        return await test_post(req["params"]["spin"])
+        return await test_post(id_telega, req["params"]["spin"])
 
 
     # Платежи

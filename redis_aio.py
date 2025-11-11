@@ -828,8 +828,17 @@ async def fetch_all_2(pattern: str, batch_size: int = 100) -> List[Dict[str, Any
 
 
 # запуск спина
-async def test_post(spin):
-    return generate_plinko_scenario(spin)
+async def test_post(id_telega, spin):
+
+    user = await redata(f"user:{id_telega}")
+    data_spin = generate_plinko_scenario(spin)
+    win_spin = data_spin["result"]["win_amount"]
+    user["stars"] += (spin - win_spin)
+    await reupdata(f"user:{id_telega}", user)
+
+    return data_spin
+
+
 
 
 async def start_data_0():
@@ -859,6 +868,8 @@ async def ttt():
     # print(dd)
     # pay_data {'id_pay_my': 'id_pay_my:310410518:1762866458RxlPS', 'id_telega': 310410518, 'typ': 'typ', 'invoice_link': 'https://t.me/$KlH1TUZcmUi2EgAA69yXu2H9zBQ', 'amount': 1, 'status_pay': '', 'payload': 'id_pay_my:310410518:1762866458RxlPS', 'time': '2025-11-11 16:07'}
 
+    dd = generate_plinko_scenario(10)
+    print(dd)
 
     # await get_pay(id_telegram, 1)
 
@@ -870,5 +881,5 @@ async def ttt():
 
 
 
-# asyncio.get_event_loop().run_until_complete(ttt())
+asyncio.get_event_loop().run_until_complete(ttt())
 
