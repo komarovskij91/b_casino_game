@@ -16,28 +16,6 @@ import config
 import models as model
 from redis_aio import test_post, rega_new_user, test_while, chek_test, start_data_0
 
-# -----------------------------
-# Логирование
-# -----------------------------
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# -----------------------------
-# Prometheus metrics
-# -----------------------------
-APP_METRIC_INFO = Info('app_version', 'A version of the application')
-APP_METRIC_INFO.info({'version': config.API_SERVICE_VERSION, 'buildhost': 'api'})
-
-APP_METRIC_REQUEST_COUNT = Counter(
-    'app_requests_total',
-    'Info about requests',
-    ['method', 'endpoint', 'status'],
-)
-APP_METRIC_REQUEST_LATENCY = Summary(
-    'app_requests_latency',
-    'Info about latency',
-    ['method', 'endpoint', 'status'],
-)
 
 metrics_app = make_asgi_app()
 
@@ -58,14 +36,6 @@ app.add_middleware(
 # /metrics для Prometheus
 app.mount("/metrics", metrics_app)
 
-
-# -----------------------------
-# Утилита для метрик
-# -----------------------------
-def observe_request_metrics(method: str, endpoint: str, status_code: int, started_at: float) -> None:
-    status_str = str(status_code)
-    APP_METRIC_REQUEST_COUNT.labels(method, endpoint, status_str).inc()
-    APP_METRIC_REQUEST_LATENCY.labels(method, endpoint, status_str).observe(time.time() - started_at)
 
 
 # -----------------------------
@@ -118,9 +88,7 @@ def validate_telegram_init_data(init_data: str, bot_token: str) -> dict:
 # -----------------------------
 @app.on_event("startup")
 async def startup_event():
-    # если chek_test – бесконечный цикл, пускай отдельно живёт
-    asyncio.create_task(chek_test())
-    logger.info("Background task chek_test started")
+    return {"status": True, "mess": "startup on_event"}
 
 
 # -----------------------------
@@ -136,123 +104,65 @@ async def health_check():
 async def v3_get():
     return {"status": "ok", "message": "use POST for API methods"}
 
-
 # -----------------------------
 # Основной эндпоинт для TMA
 # -----------------------------
 @app.post("/v3")
 async def api_v3(request: model.Request):
-    print("Получен запрос:", request.model_dump())
-    print("request.qhc", request.qhc)
-    """
-    Универсальный эндпоинт под TMA:
-    - request.method  — имя метода (start_data, test_qhc, myprof, ...)
-    - request.params  — параметры
-    - request.qhc     — Telegram WebApp initData (initData string)
-    """
-    started_at = time.time()
-    endpoint = "/v3"
-    method_name: str = getattr(request, "method", None)
+    # print("Получен запрос:", request.model_dump())
+    # print("request.qhc", request.qhc)
 
-    logger.debug("Received /v3 method: %s", method_name)
+    call_started = 1
 
-    # Методы, которые НЕ требуют qhc/initData и проверки подписи
-    public_methods = {
-        "start_data",
-        "test_post"
-        "telega_rega_bot",  # этот часто вызывается не из миниаппа, оставим публичным
-    }
-
-    parsed_init_data: Optional[dict] = None
-    user_id: Optional[int] = None
-
-    # -------------------------
-    # Проверка подписи initData
-    # -------------------------
-    if method_name not in public_methods:
-        if not request.qhc or not request.qhc.strip():
-            logger.error("qhc is empty for method %s", method_name)
-            observe_request_metrics(method_name or "unknown", endpoint, 400, started_at)
-            raise HTTPException(status_code=400, detail="qhc (initData) is required")
-
-        logger.debug("Received qhc length: %s", len(request.qhc))
-        logger.debug("qhc preview: %s...", request.qhc[:120])
-
-        try:
-            data = validate_telegram_init_data(request.qhc, config.TG_BOT_TOKEN)
-        except ValueError as e:
-            logger.error("Invalid signature for method %s: %s", method_name, e)
-            observe_request_metrics(method_name or "unknown", endpoint, 401, started_at)
-            raise HTTPException(status_code=401, detail="Invalid signature")
-
-        # user в initData — JSON-строка
-        user_raw = data.get("user")
-        try:
-            user = json.loads(user_raw) if isinstance(user_raw, str) else user_raw
-        except json.JSONDecodeError:
-            logger.exception("Cannot decode user JSON from initData")
-            observe_request_metrics(method_name or "unknown", endpoint, 400, started_at)
-            raise HTTPException(status_code=400, detail="Invalid user field in initData")
-
-        data["user"] = user
-        parsed_init_data = data
-        user_id = user.get("id")
-        logger.debug("Signature check passed, user_id: %s", user_id)
-    else:
-        logger.debug("Public method %s, skip initData auth", method_name)
-
-    # Объект, который можно возвращать в отладочных методах
-
-    req_obj = {
-        "method": method_name,
+    req = {
+        "method": request.method,  # типо пример myprof
+        "call_started": call_started,
         "params": request.params,
-        "qhc": request.qhc,
-        "init_data": parsed_init_data,
-        "user_id": user_id,
+        "qhc": request.qhc
     }
 
-    # -------------------------
-    # Роутинг по методам
-    # -------------------------
-    try:
-        # Публичные методы
-        if method_name == "start_data":
-            response = await start_data_0()
-            observe_request_metrics(method_name, endpoint, 200, started_at)
-            return response
+    # if req["qhc"] == "":
+    #     print("postman")
 
-        if method_name == "test_post":
-            response = await test_post(spin=request.params.get("spin"))
-            observe_request_metrics(method_name, endpoint, 200, started_at)
-            return response
-
-        if method_name == "test_qhc":
-            # просто возвращаем то, что пришло/распарсили
-            observe_request_metrics(method_name, endpoint, 200, started_at)
-            return {"ok": True, "req": req_obj}
+    # try:
+    #     qq = parse_user_query(request.qhc, req)
+    #     # print("дата от телеги\n")
+    #     # print(qq)
+    #
+    #     id_telega = qq["user"]["id"]
+    #     language_code = qq["user"]["language_code"]
+    #
+    #     # print(id_telega, request.method)
+    #     print(f"ответ распарсить")
+    #
+    # except Exception as ex:
+    #     id_telega = 310410518
+    #     print("ошибка1")
 
 
-        # TODO: сюда же добавишь остальные методы игры:
-        # if method_name == "myprof":
-        #     ...
+    if request.method == "test1":
 
-        # Если метод неизвестен
-        logger.warning("Unknown method in /v3: %s", method_name)
-        observe_request_metrics(method_name or "unknown", endpoint, 400, started_at)
-        raise HTTPException(status_code=400, detail={"message": "unknown method", "req": req_obj})
+        return {
+            "status": "success",
+            "method": request.method,
+            "params": request.params,
+            "qhc": request.qhc
+        }
 
-    except HTTPException:
-        # уже всё залогировано и прометей обновлён выше
-        raise
-    except Exception as e:
-        logger.exception("Error while handling method %s: %s", method_name, e)
-        observe_request_metrics(method_name or "unknown", endpoint, 500, started_at)
-        raise HTTPException(status_code=500, detail="internal server error")
+    if request.method == "start_data":
+        return await start_data_0()
+
+    if request.method == "test_post":
+        return await test_post(req["params"]["spin"])
+
+    if request.method == "test_qhc":
+        return "ok"
 
 
-# -----------------------------
-# Точка входа
-# -----------------------------
+
+    return {"status": False, "mess": "err"}
+
+
+
 if __name__ == "__main__":
-    # Railway обычно запускает `python main.py`, этого достаточно
     uvicorn.run(app, host="0.0.0.0", port=8000)
