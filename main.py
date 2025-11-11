@@ -176,8 +176,8 @@ async def api_v3(request: model.Request):
 
     try:
         qq = parse_user_query(request.qhc, req)
-        # print("дата от телеги\n")
-        # print(qq)
+        print("дата от телеги\n")
+        print(qq)
 
         id_telega = qq["user"]["id"]
         language_code = qq["user"]["language_code"]
@@ -187,7 +187,7 @@ async def api_v3(request: model.Request):
 
     except Exception as ex:
         id_telega = 310410518
-        print("ошибка1")
+        print("ошибка1 qq = parse_user_query(request.qhc, req)")
 
     if request.method == "track_referral":
 
