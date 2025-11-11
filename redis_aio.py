@@ -351,6 +351,8 @@ def user_data_chek(data):
     if "id" in data["user"]:
         dd["id"] = data["user"]["id"]
 
+    if "start_param" in data:
+        dd["ref"] = data["start_param"]
 
     return dd
 

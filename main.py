@@ -177,14 +177,14 @@ async def api_v3(request: model.Request):
 
     try:
         qq = parse_user_query(request.qhc, req)
-        print("дата от телеги")
+        # print("дата от телеги")
         # print(qq)
 
         id_telega = qq["user"]["id"]
         language_code = qq["user"]["language_code"]
 
         # print(id_telega, request.method)
-        print(f"ответ распарсить")
+        # print(f"ответ распарсить")
 
     except Exception as ex:
         id_telega = 310410518
