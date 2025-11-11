@@ -150,19 +150,9 @@ async def data_reg(id_telega):
 
 
 # Создать нового человека
-async def rega_new_user(id_telegram, data):
+async def rega_new_user(id_telegram, data=None):
 
-    # print("rega_new_user id_telegram", id_telegram)
-    # print("data", data)
-    # data = {
-    #     "username": user_n,
-    #     "first_name": first_n,
-    #     'last_name': last_n,
-    #     'language_code': language,
-    #     "ref": message.text[7:]
-    # }
-
-    if data == {}:
+    if data == {} or None:
         data = {
             "username": None,
             "first_name": None,
@@ -188,44 +178,55 @@ async def rega_new_user(id_telegram, data):
             nuser["id_telega"] = id_telegram
             nuser["data_reg"] = time.time()
 
-            if data["language_code"] != "ru" and data["language_code"] != "en":
-                data["language_code"] = "en"
+            if "first_name" in data:
+                nuser["first_name"] = data["first_name"]
 
-            nuser["lang"] = data["language_code"]
-            nuser["first_name"] = data["first_name"]
-            nuser["last_name"] = data["last_name"]
-            nuser["lang"] = data["language_code"]
-            nuser["username"] = data["username"]
-            nuser["ref"] = data["ref"]
+            else:
+                nuser["first_name"] = None
 
+            if "last_name" in data:
+                nuser["last_name"] = data["last_name"]
+            else:
+                nuser["last_name"] = None
 
+            if "username" in data:
+                nuser["username"] = data["username"]
+            else:
+                nuser["username"] = None
 
-            # # проверка на реф
-            # if data["ref"] != None:
-            #     print(f"Рега без рефки")
-            #     red_data_user = await redata(f"po_user:{data['ref']}")
+            if "language_code" in data:
+                nuser["lang"] = data["language_code"]
+            else:
+                nuser["lang"] = "en"
 
-            # # проверка на реф
-            # if data["ref"] == None:
-            #     print(f"Рега без рефки")
+            if "is_premium" in data:
+                nuser["prem"] = data["is_premium"]
+            else:
+                nuser["prem"] = None
 
+            if "ref" in data:
+                nuser["ref"] = data["ref"]
+            else:
+                nuser["ref"] = None
 
-
-
-            count_player = await redata("count_player")
-            nn_count = count_player["count_player"] + 1
-            nuser["count_player"] = nn_count
-            count_player["count_player"] += 1
-            await reupdata("count_player", count_player)
-
+            # проверка на реф
 
             # создали персанажа
             # вставить
             await client_redis.set(f"user:{id_telegram}", json.dumps(nuser))
 
-
             print("ok _ Зарегали нового человека", id_telegram, data)
 
+            user = await redata(f"user:{id_telegram}")
+
+            mess = "ЕЕЕ"
+            try:
+                await bot.send_message(id_telegram, mess)
+            except:
+                print("не смогли отправить сообщение")
+
+
+            return user
 
 
 
@@ -353,6 +354,36 @@ def user_data_chek(data):
 
     if "start_param" in data:
         dd["ref"] = data["start_param"]
+
+    return dd
+
+
+def user_data_rega(data):
+
+    dd = {}
+    if "id" in data:
+        dd["id"] = data["id"]
+
+    if "first_name" in data:
+        dd["first_name"] = data["first_name"]
+
+    if "last_name" in data:
+        dd["last_name"] = data["last_name"]
+
+    if "last_name" in data:
+        dd["last_name"] = data["last_name"]
+
+    if "username" in data:
+        dd["username"] = data["username"]
+
+    if "language_code" in data:
+        dd["language_code"] = data["language_code"]
+
+    if "is_premium" in data:
+        dd["is_premium"] = data["is_premium"]
+
+    if "ref" in data:
+        dd["ref"] = data["ref"]
 
     return dd
 
@@ -827,7 +858,6 @@ async def ttt():
     # dd = await test_post(10)
     # print(dd)
     # pay_data {'id_pay_my': 'id_pay_my:310410518:1762866458RxlPS', 'id_telega': 310410518, 'typ': 'typ', 'invoice_link': 'https://t.me/$KlH1TUZcmUi2EgAA69yXu2H9zBQ', 'amount': 1, 'status_pay': '', 'payload': 'id_pay_my:310410518:1762866458RxlPS', 'time': '2025-11-11 16:07'}
-
 
 
     # await get_pay(id_telegram, 1)

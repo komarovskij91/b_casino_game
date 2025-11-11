@@ -15,7 +15,7 @@ from prometheus_client import Info, Counter, Summary, make_asgi_app
 import config
 import models as model
 from redis_aio import test_post, rega_new_user, test_while, chek_test, start_data_0, get_pay, chek_pay, \
-user_data_chek
+user_data_chek, user_data_rega
 
 
 metrics_app = make_asgi_app()
@@ -192,6 +192,7 @@ async def api_v3(request: model.Request):
 
     if request.method == "track_referral":
 
+        print("Зашли через ссылку на игру!")
         referral_code = req["params"]["referral_code"]
         print(f"🎯 РЕФЕРАЛЬНЫЙ КОД ПОЛУЧЕН: {referral_code}")
 
@@ -205,25 +206,12 @@ async def api_v3(request: model.Request):
         # Здесь можно сохранить в базу данных
 
         dd = user_data_chek(qq)
-        print(dd)
+        dd_rega = user_data_rega(dd)
+
+        data_reg = await rega_new_user(user_id, dd_rega)
+        return data_reg
 
 
-        return {
-            "status": "ok",
-            "referral_code": referral_code,
-            "user_id": user_id
-        }
-
-
-
-    if request.method == "test1":
-
-        return {
-            "status": "success",
-            "method": request.method,
-            "params": request.params,
-            "qhc": request.qhc
-        }
 
 
     # Стартовые параметры
