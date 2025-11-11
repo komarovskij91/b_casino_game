@@ -109,8 +109,8 @@ async def v3_get():
 # -----------------------------
 @app.post("/v3")
 async def api_v3(request: model.Request):
-    # print("Получен запрос:", request.model_dump())
-    # print("request.qhc", request.qhc)
+    print("Получен запрос:", request.model_dump())
+    print("request.qhc", request.qhc)
 
     call_started = 1
 
