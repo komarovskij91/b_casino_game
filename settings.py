@@ -23,7 +23,7 @@ new_user = {
     "ref_bonus": False,
 
     # баланс звезд
-    "stars": 100,
+    "stars": 200,
 
 
     # реф
