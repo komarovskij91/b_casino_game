@@ -37,6 +37,8 @@ app.add_middleware(
 app.mount("/metrics", metrics_app)
 
 
+APP_METRIC_REQUEST_COUNT = Counter('app_requests_total', 'Info about requests', ['method', 'endpoint', 'status'])
+APP_METRIC_REQUEST_LATENCY = Summary('app_requests_latency', 'Info about latency', ['method', 'endpoint', 'status'])
 
 # -----------------------------
 # Проверка подписи Telegram WebApp initData
@@ -83,6 +85,54 @@ def validate_telegram_init_data(init_data: str, bot_token: str) -> dict:
     return data
 
 
+def raise_response(req: dict, status_code=200, message=""):
+
+    # if status_code in [400, 405]:
+    #     logging.error(f"'status_code': {status_code}, 'message': {message}")
+    # else:
+    #     logging.info(f"'status_code': {status_code}, 'message': {message}")
+
+    # post metrics for non-standard responses:
+    APP_METRIC_REQUEST_COUNT.labels(req["method"], 'v1', status_code).inc()
+    APP_METRIC_REQUEST_LATENCY.labels(req["method"], 'v1', status_code).observe(time.time()-req["call_started"])
+
+    raise HTTPException(status_code=status_code, detail={"message": message})
+
+
+def parse_user_query(init_data: str, req):
+    try:
+        parsed_data = dict(parse_qsl(init_data))
+        parsed_data['user'] = json.loads(parsed_data['user'])
+        # мое
+
+        #?
+        # logged_ = parsed_data['auth_date']
+        # if int(time.time()) - int(logged_) > int(config.AUTH_SESSION_ALIVE):
+        #     # Request is expired. Need to relogin to webapp
+        #     output = json.dumps({
+        #         "message": "Your session has expired"
+        #     })
+        #     raise_response(req, 401, output)
+
+
+    except ValueError:
+        # Init data is not a valid query string
+        output = json.dumps({
+            "message": "Init data is not a valid query string"
+        })
+        raise_response(req, 400, output)
+
+    if "hash" not in parsed_data:
+        # Hash is not present in init data
+        output = json.dumps({
+            "message": "Hash is not present in init data"
+        })
+        raise_response(req, 401, output)
+
+    return parsed_data
+
+
+
 # -----------------------------
 # Фоновый таск при старте (chek_test)
 # -----------------------------
@@ -124,27 +174,42 @@ async def api_v3(request: model.Request):
     # if req["qhc"] == "":
     #     print("postman")
 
-    # try:
-    #     qq = parse_user_query(request.qhc, req)
-    #     # print("дата от телеги\n")
-    #     # print(qq)
-    #
-    #     id_telega = qq["user"]["id"]
-    #     language_code = qq["user"]["language_code"]
-    #
-    #     # print(id_telega, request.method)
-    #     print(f"ответ распарсить")
-    #
-    # except Exception as ex:
-    #     id_telega = 310410518
-    #     print("ошибка1")
+    try:
+        qq = parse_user_query(request.qhc, req)
+        # print("дата от телеги\n")
+        # print(qq)
+
+        id_telega = qq["user"]["id"]
+        language_code = qq["user"]["language_code"]
+
+        # print(id_telega, request.method)
+        print(f"ответ распарсить")
+
+    except Exception as ex:
+        id_telega = 310410518
+        print("ошибка1")
+
+    if request.method == "track_referral":
 
 
-    if request.method == "testref":
+        referral_code = req["params"]["referral_code"]
+        print(f"🎯 РЕФЕРАЛЬНЫЙ КОД ПОЛУЧЕН: {referral_code}")
 
-        print(request)
+        # Получаем ID пользователя из qhc
+        parsed_data = parse_user_query(request.qhc, req)
+        user_id = parsed_data["user"]["id"]
 
-        return request
+        print(f"👤 Пользователь ID: {user_id}")
+        print(f"🔗 Реферальный код: {referral_code}")
+
+        # Здесь можно сохранить в базу данных
+        # await save_referral(user_id, referral_code)
+
+        return {
+            "status": "ok",
+            "referral_code": referral_code,
+            "user_id": user_id
+        }
 
 
 
