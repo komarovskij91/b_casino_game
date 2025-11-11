@@ -213,7 +213,7 @@ async def rega_new_user(id_telegram, data=None):
 
             # создали персанажа
             # вставить
-            await client_redis.set(f"user:{id_telegram}", json.dumps(nuser))
+            await reupdata(f"user:{id_telegram}", nuser)
 
             print("ok _ Зарегали нового человека", id_telegram, data)
 
