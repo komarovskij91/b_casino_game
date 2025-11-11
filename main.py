@@ -14,7 +14,7 @@ from prometheus_client import Info, Counter, Summary, make_asgi_app
 
 import config
 import models as model
-from redis_aio import test_post, rega_new_user, test_while, chek_test, start_data_0
+from redis_aio import test_post, rega_new_user, test_while, chek_test, start_data_0, get_pay, chek_pay
 
 
 metrics_app = make_asgi_app()
@@ -140,6 +140,15 @@ async def api_v3(request: model.Request):
     #     print("ошибка1")
 
 
+    if request.method == "testref":
+
+        print(request)
+
+        return request
+
+
+
+
     if request.method == "test1":
 
         return {
@@ -152,11 +161,24 @@ async def api_v3(request: model.Request):
     if request.method == "start_data":
         return await start_data_0()
 
+
+
+
+
     if request.method == "test_post":
         return await test_post(req["params"]["spin"])
 
     if request.method == "test_qhc":
         return "ok"
+
+
+
+    # Платежи
+    if request.method == "get_pay":
+        return await get_pay(310410518, req["params"]["many"])
+
+    if request.method == "chek_pay":
+        return await chek_pay(req["params"]["payload"])
 
 
 

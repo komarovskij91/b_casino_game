@@ -168,12 +168,12 @@ async def rega_new_user(id_telegram, data):
             "first_name": None,
             'last_name': None,
             'language_code': "en",
-            "ref": ""
+            "ref": None
         }
 
     if int(id_telegram) > 0:
 
-        user = await redata(f"ny_user:{id_telegram}")
+        user = await redata(f"po_user:{id_telegram}")
 
         if user != None:
             print(f"есть уже {id_telegram}")
@@ -186,15 +186,7 @@ async def rega_new_user(id_telegram, data):
             nuser = settings.new_user.copy()
 
             nuser["id_telega"] = id_telegram
-
-            nuser["name"] = ""
             nuser["data_reg"] = time.time()
-
-            # для ежедневок
-            nuser["old_time"] = time.time()
-            nuser["old_day"] = time.strftime('%Y-%m-%d %H:%M', time.localtime(time.time()))
-            nuser["old_time_reg_energ"] = time.time()
-
 
             if data["language_code"] != "ru" and data["language_code"] != "en":
                 data["language_code"] = "en"
@@ -207,29 +199,32 @@ async def rega_new_user(id_telegram, data):
             nuser["ref"] = data["ref"]
 
 
-            red_data_user = await redata(f"ny_user:{data['ref']}")
-            if red_data_user != None:
-                print(f"Рега по ссылке юзера")
 
-            # выдать подарок и поместить на слот
-            # проверка на реф
-            if data["ref"] == "":
-                print(f"Рега без рефки")
+            # # проверка на реф
+            # if data["ref"] != None:
+            #     print(f"Рега без рефки")
+            #     red_data_user = await redata(f"po_user:{data['ref']}")
+
+            # # проверка на реф
+            # if data["ref"] == None:
+            #     print(f"Рега без рефки")
 
 
-            count_player = await redata("ny_count_player")
+
+
+            count_player = await redata("po_count_player")
             nn_count = count_player["count_player"] + 1
             nuser["count_player"] = nn_count
             count_player["count_player"] += 1
-            await reupdata("ny_count_player", count_player)
+            await reupdata("po_count_player", count_player)
 
 
             # создали персанажа
             # вставить
-            await client_redis.set(f"ny_user:{id_telegram}", json.dumps(nuser))
+            await client_redis.set(f"po_user:{id_telegram}", json.dumps(nuser))
 
             # Обновление "коллекции" users
-            await client_redis.sadd("ny_users", id_telegram)
+            await client_redis.sadd("po_users", id_telegram)
 
             # Для ретеншена
             await data_reg(id_telegram)
@@ -253,7 +248,7 @@ async def chek_new_param(id_telegram, user_data):
             user_data[new_param] = settings.new_user[new_param]
             print(f"добавили для {id_telegram} - {new_param}", settings.new_user[new_param])
 
-    await reupdata(f"ny_user:{id_telegram}", user_data)
+    await reupdata(f"po_user:{id_telegram}", user_data)
 
     return user_data
 
@@ -269,7 +264,7 @@ async def update_login_streak(id_telega):
     Если пропущено >=1 дня — сброс до 1.
     """
 
-    key = f"ny_user:{id_telega}"
+    key = f"po_user:{id_telega}"
     user = await redata(key)
 
     now_ts = time.time()
@@ -388,9 +383,10 @@ async def get_pay(id_telega, many):
         }
     }
 
-    user = await redata(f"ny_user:{id_telega}")
-    lang = user["lang"]
+    # user = await redata(f"po_user:{id_telega}")
+    # lang = user["lang"]
 
+    lang = "ru"
     title = shop[lang]["title"]
     description = shop[lang]["description"]
 
@@ -426,7 +422,7 @@ async def get_pay(id_telega, many):
             "payload": id_pay_my,
             "time": f'{datetime.now().strftime("%Y-%m-%d %H:%M")}',
         }
-        # print("pay_data", pay_data)
+        print("pay_data", pay_data)
 
         # Создали себе запись с - id_pay_my
         await reupdata(id_pay_my, pay_data)
@@ -472,9 +468,9 @@ async def chek_pay(id_pay_my):
     if dd_status_pay["status"] == True:
 
         # выдаем то что надо выдать
-        user = await redata(f"ny_user:{id_telegram}")
+        user = await redata(f"po_user:{id_telegram}")
         user["stars"] += dd_status_pay["amount"]
-        await reupdata(f"ny_user:{id_telegram}", user)
+        await reupdata(f"po_user:{id_telegram}", user)
 
         dd = {
             "title": {
@@ -491,10 +487,8 @@ async def chek_pay(id_pay_my):
         }
 
         print(dd)
+
         return dd
-
-
-
 
     if dd_status_pay["status"] == "pay":
         dd = {
@@ -658,7 +652,16 @@ async def purchase(id_telegram, typ):
 
 
 async def stars_payments(payload=None):
-    limit_offset = await redata(f"ny_limit_offset")
+    limit_offset = await redata(f"po_limit_offset")
+    if limit_offset == None:
+        limit_offset = {
+            "limit": 20,
+            "offset": 0
+        }
+        await reupdata("po_limit_offset", limit_offset)
+        limit_offset = await redata(f"po_limit_offset")
+
+
     # начинаем с 0
     limit = limit_offset["limit"]  # Сколько на странице
     offset = limit_offset["offset"]  # Страница
@@ -677,7 +680,6 @@ async def stars_payments(payload=None):
         }
         # print(dd)
         return dd
-
 
 
     mm = 0
@@ -715,7 +717,7 @@ async def stars_payments(payload=None):
 
             limit_offset["limit"] = limit
             limit_offset["offset"] = offset
-            await reupdata("ny_limit_offset", limit_offset)
+            await reupdata("po_limit_offset", limit_offset)
 
             # print("конец")
             # print(f"всего {mm}, последний limit {limit} offset {offset}")
@@ -800,12 +802,21 @@ async def ttt():
     sacha = 980627987
 
     id_evgeniyshow = 194092787
-    dd = await test_post(10)
-    print(dd)
+    # dd = await test_post(10)
+    # print(dd)
+    # pay_data {'id_pay_my': 'id_pay_my:310410518:1762866458RxlPS', 'id_telega': 310410518, 'typ': 'typ', 'invoice_link': 'https://t.me/$KlH1TUZcmUi2EgAA69yXu2H9zBQ', 'amount': 1, 'status_pay': '', 'payload': 'id_pay_my:310410518:1762866458RxlPS', 'time': '2025-11-11 16:07'}
 
 
+
+    # await get_pay(id_telegram, 1)
+
+    # await chek_pay()
+
+    await rega_new_user(id_telegram)
 
     pass
+
+
 
 # asyncio.get_event_loop().run_until_complete(ttt())
 

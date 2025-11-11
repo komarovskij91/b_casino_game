@@ -283,6 +283,7 @@ def generate_plinko_scenario(bet: float, seed: Optional[str] = None) -> Dict[str
 
     return scenario
 
+
 def start_data():
     return {
         "ROWS": ROWS,

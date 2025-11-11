@@ -8,7 +8,7 @@ new_user = {
     "first_name": None,
     "last_name": None,
     "lang": 'en',
-    "photo_url": "",
+    "photo_url": None,
 
     "prem": None,
     "username": None,
@@ -17,16 +17,13 @@ new_user = {
     "day": 0,  #
     "day_time": 0,  #
 
-    "name": "",  #
-    "data_reg": "",  #
-    "ref": "",  #
+    "name": None,  #
+    "data_reg": None,  #
+    "ref": None,  #
     "ref_bonus": False,
-    "old_time": 0,  # последний раз заходил
-    "old_day": 0,
-    "old_time_reg_energ": 0,  # последний раз реген енерг
 
     # баланс звезд
-    "stars": 0,
+    "stars": 100,
 
     # реф
     "ref_ok": 0,
