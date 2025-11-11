@@ -49,7 +49,7 @@ from gen_spin_2 import generate_plinko_scenario, start_data
 redis_url = os.getenv("REDIS_URL")
 if not redis_url:
     # Строка подключения
-    redis_url = "redis://default:PoMGWkghyNOhahqsulDlTzFfzNUixrWL@maglev.proxy.rlwy.net:30329"
+    redis_url = "redis://default:jkPaytVZkLjHBynAueZtgJHNSKTYYVYX@switchback.proxy.rlwy.net:42148"
     print("конект через публик")
 else:
     print("Коннект через приватку к редис")
@@ -812,7 +812,7 @@ async def ttt():
 
     # await chek_pay()
 
-    await rega_new_user(id_telegram)
+    # await rega_new_user(id_telegram)
 
     pass
 

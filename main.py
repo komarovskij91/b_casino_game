@@ -159,8 +159,8 @@ async def v3_get():
 # -----------------------------
 @app.post("/v3")
 async def api_v3(request: model.Request):
-    print("Получен запрос:", request.model_dump())
-    print("request.qhc", request.qhc)
+    # print("Получен запрос:", request.model_dump())
+    # print("request.qhc", request.qhc)
 
     call_started = 1
 
@@ -204,6 +204,13 @@ async def api_v3(request: model.Request):
 
         # Здесь можно сохранить в базу данных
         # await save_referral(user_id, referral_code)
+
+
+
+
+
+
+
 
         return {
             "status": "ok",
