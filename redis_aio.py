@@ -173,7 +173,7 @@ async def rega_new_user(id_telegram, data):
 
     if int(id_telegram) > 0:
 
-        user = await redata(f"po_user:{id_telegram}")
+        user = await redata(f"user:{id_telegram}")
 
         if user != None:
             print(f"есть уже {id_telegram}")
@@ -212,31 +212,20 @@ async def rega_new_user(id_telegram, data):
 
 
 
-            count_player = await redata("po_count_player")
+            count_player = await redata("count_player")
             nn_count = count_player["count_player"] + 1
             nuser["count_player"] = nn_count
             count_player["count_player"] += 1
-            await reupdata("po_count_player", count_player)
+            await reupdata("count_player", count_player)
 
 
             # создали персанажа
             # вставить
-            await client_redis.set(f"po_user:{id_telegram}", json.dumps(nuser))
+            await client_redis.set(f"user:{id_telegram}", json.dumps(nuser))
 
-            # Обновление "коллекции" users
-            await client_redis.sadd("po_users", id_telegram)
 
-            # Для ретеншена
-            await data_reg(id_telegram)
             print("ok _ Зарегали нового человека", id_telegram, data)
 
-            user_gift = {
-                "list": []
-            }
-
-            await reupdata(f"user_gift:{id_telegram}", user_gift)
-            await post_request_get_gift(id_telegram, nuser["username"])
-            await client_redis.set(f"user_pars:{id_telegram}", "1", ex=6 * 60 * 60)
 
 
 
@@ -248,7 +237,7 @@ async def chek_new_param(id_telegram, user_data):
             user_data[new_param] = settings.new_user[new_param]
             print(f"добавили для {id_telegram} - {new_param}", settings.new_user[new_param])
 
-    await reupdata(f"po_user:{id_telegram}", user_data)
+    await reupdata(f"user:{id_telegram}", user_data)
 
     return user_data
 
@@ -264,7 +253,7 @@ async def update_login_streak(id_telega):
     Если пропущено >=1 дня — сброс до 1.
     """
 
-    key = f"po_user:{id_telega}"
+    key = f"user:{id_telega}"
     user = await redata(key)
 
     now_ts = time.time()
@@ -336,6 +325,37 @@ async def chek_test():
     )
 
 
+# для получения с фронта
+def user_data_chek(data):
+
+    dd = {}
+
+    if "id" in data["user"]:
+        dd["id"] = data["user"]["id"]
+
+    if "first_name" in data["user"]:
+        dd["first_name"] = data["user"]["first_name"]
+
+    if "last_name" in data["user"]:
+        dd["last_name"] = data["user"]["last_name"]
+
+    if "username" in data["user"]:
+        dd["username"] = data["user"]["username"]
+
+    if "language_code" in data["user"]:
+        dd["language_code"] = data["user"]["language_code"]
+
+    if "is_premium" in data["user"]:
+        dd["is_premium"] = data["user"]["is_premium"]
+
+    if "id" in data["user"]:
+        dd["id"] = data["user"]["id"]
+
+
+    return dd
+
+
+
 
 
 ###########
@@ -383,7 +403,7 @@ async def get_pay(id_telega, many):
         }
     }
 
-    # user = await redata(f"po_user:{id_telega}")
+    # user = await redata(f"user:{id_telega}")
     # lang = user["lang"]
 
     lang = "ru"
@@ -468,9 +488,9 @@ async def chek_pay(id_pay_my):
     if dd_status_pay["status"] == True:
 
         # выдаем то что надо выдать
-        user = await redata(f"po_user:{id_telegram}")
+        user = await redata(f"user:{id_telegram}")
         user["stars"] += dd_status_pay["amount"]
-        await reupdata(f"po_user:{id_telegram}", user)
+        await reupdata(f"user:{id_telegram}", user)
 
         dd = {
             "title": {
@@ -652,14 +672,14 @@ async def purchase(id_telegram, typ):
 
 
 async def stars_payments(payload=None):
-    limit_offset = await redata(f"po_limit_offset")
+    limit_offset = await redata(f"limit_offset")
     if limit_offset == None:
         limit_offset = {
             "limit": 20,
             "offset": 0
         }
-        await reupdata("po_limit_offset", limit_offset)
-        limit_offset = await redata(f"po_limit_offset")
+        await reupdata("limit_offset", limit_offset)
+        limit_offset = await redata(f"limit_offset")
 
 
     # начинаем с 0
@@ -717,7 +737,7 @@ async def stars_payments(payload=None):
 
             limit_offset["limit"] = limit
             limit_offset["offset"] = offset
-            await reupdata("po_limit_offset", limit_offset)
+            await reupdata("limit_offset", limit_offset)
 
             # print("конец")
             # print(f"всего {mm}, последний limit {limit} offset {offset}")
@@ -774,7 +794,7 @@ async def fetch_all_2(pattern: str, batch_size: int = 100) -> List[Dict[str, Any
 
 
 
-
+# запуск спина
 async def test_post(spin):
     return generate_plinko_scenario(spin)
 

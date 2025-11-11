@@ -29,7 +29,6 @@ new_user = {
     "ref_ok": 0,
     "ref_list": []
 
-
 }
 
 

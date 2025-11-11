@@ -14,7 +14,8 @@ from prometheus_client import Info, Counter, Summary, make_asgi_app
 
 import config
 import models as model
-from redis_aio import test_post, rega_new_user, test_while, chek_test, start_data_0, get_pay, chek_pay
+from redis_aio import test_post, rega_new_user, test_while, chek_test, start_data_0, get_pay, chek_pay, \
+user_data_chek
 
 
 metrics_app = make_asgi_app()
@@ -176,8 +177,8 @@ async def api_v3(request: model.Request):
 
     try:
         qq = parse_user_query(request.qhc, req)
-        print("дата от телеги\n")
-        print(qq)
+        print("дата от телеги")
+        # print(qq)
 
         id_telega = qq["user"]["id"]
         language_code = qq["user"]["language_code"]
@@ -191,7 +192,6 @@ async def api_v3(request: model.Request):
 
     if request.method == "track_referral":
 
-
         referral_code = req["params"]["referral_code"]
         print(f"🎯 РЕФЕРАЛЬНЫЙ КОД ПОЛУЧЕН: {referral_code}")
 
@@ -203,13 +203,9 @@ async def api_v3(request: model.Request):
         print(f"🔗 Реферальный код: {referral_code}")
 
         # Здесь можно сохранить в базу данных
-        # await save_referral(user_id, referral_code)
 
-
-
-
-
-
+        dd = user_data_chek(qq)
+        print(dd)
 
 
         return {
@@ -217,7 +213,6 @@ async def api_v3(request: model.Request):
             "referral_code": referral_code,
             "user_id": user_id
         }
-
 
 
 
@@ -230,24 +225,20 @@ async def api_v3(request: model.Request):
             "qhc": request.qhc
         }
 
+
+    # Стартовые параметры
     if request.method == "start_data":
         return await start_data_0()
 
 
-
-
-
+    # запуск спина
     if request.method == "test_post":
         return await test_post(req["params"]["spin"])
-
-    if request.method == "test_qhc":
-        return "ok"
-
 
 
     # Платежи
     if request.method == "get_pay":
-        return await get_pay(310410518, req["params"]["many"])
+        return await get_pay(id_telega, req["params"]["many"])
 
     if request.method == "chek_pay":
         return await chek_pay(req["params"]["payload"])
