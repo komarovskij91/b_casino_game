@@ -829,18 +829,14 @@ async def fetch_all_2(pattern: str, batch_size: int = 100) -> List[Dict[str, Any
 
 # запуск спина
 async def test_post(id_telega, spin):
-    print(id_telega, "spin", spin)
     user = await redata(f"user:{id_telega}")
     data_spin = generate_plinko_scenario(spin)
     win_spin = data_spin["result"]["win_amount"]
-    print("balans", user["stars"])
-    print("spin", spin)
-    print("win_spin", win_spin)
     user["stars"] -= spin
     user["stars"] += win_spin
+    user["stavka"] = spin
     await reupdata(f"user:{id_telega}", user)
 
-    print(print("balans", user["stars"]))
     return data_spin
 
 
@@ -868,7 +864,7 @@ async def my_prof(id_telegram):
         "balans": user["stars"],
         "stavka": user["stavka"]
     }
-    print(dd)
+    # print(dd)
     return dd
 
 
@@ -889,8 +885,8 @@ async def ttt():
 
     # dd = generate_plinko_scenario(10)
     # print(dd)
-    user = await redata(f"user:{id_telegram}")
-    print(user)
+    # user = await redata(f"user:{id_telegram}")
+    # print(user)
 
     # await get_pay(id_telegram, 1)
 
