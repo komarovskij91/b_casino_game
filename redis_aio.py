@@ -523,11 +523,12 @@ async def chek_pay(id_pay_my):
     if dd_status_pay["status"] == True:
 
         # # выдаем то что надо выдать
-        # user = await redata(f"user:{id_telegram}")
-        # user["stars"] += dd_status_pay["amount"]
-        # await reupdata(f"user:{id_telegram}", user)
+        user = await redata(f"user:{id_telegram}")
+        user["stars"] += int(dd_status_pay["amount"])
+        await reupdata(f"user:{id_telegram}", user)
 
         dd = {
+            "status": True
             "title": {
                 "ru": "Успех",
                 "en": "Success"
@@ -539,12 +540,6 @@ async def chek_pay(id_pay_my):
 
         }
 
-
-        dd = {
-            "status": True
-        }
-
-        # print(dd)
 
         return dd
 
