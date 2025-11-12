@@ -226,10 +226,11 @@ async def api_v3(request: model.Request):
     if request.method == "plus_balans":
         return await plus_balans(id_telega)
 
-
-    # Платежи
     if request.method == "my_prof":
         return await my_prof(id_telega)
+
+    # Платежи
+
 
     if request.method == "get_pay":
         return await get_pay(id_telega, req["params"]["amount"])
