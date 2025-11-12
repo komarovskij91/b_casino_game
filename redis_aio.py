@@ -518,6 +518,8 @@ async def chek_pay(id_pay_my):
 
     # проверяем полачен ли платеж
     dd_status_pay = await stars_payments(id_pay_my)
+    print("dd_status_pay", dd_status_pay)
+
     if dd_status_pay["status"] == True:
 
         # # выдаем то что надо выдать
@@ -542,7 +544,7 @@ async def chek_pay(id_pay_my):
             "status": True
         }
 
-        print(dd)
+        # print(dd)
 
         return dd
 
