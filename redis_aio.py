@@ -520,10 +520,10 @@ async def chek_pay(id_pay_my):
     dd_status_pay = await stars_payments(id_pay_my)
     if dd_status_pay["status"] == True:
 
-        # выдаем то что надо выдать
-        user = await redata(f"user:{id_telegram}")
-        user["stars"] += dd_status_pay["amount"]
-        await reupdata(f"user:{id_telegram}", user)
+        # # выдаем то что надо выдать
+        # user = await redata(f"user:{id_telegram}")
+        # user["stars"] += dd_status_pay["amount"]
+        # await reupdata(f"user:{id_telegram}", user)
 
         dd = {
             "title": {
@@ -535,6 +535,11 @@ async def chek_pay(id_pay_my):
                 "en": f"Your balance has been successfully topped up with {dd_status_pay['amount']} Starts"
             }
 
+        }
+
+
+        dd = {
+            "status": True
         }
 
         print(dd)
@@ -553,6 +558,8 @@ async def chek_pay(id_pay_my):
             }
 
         }
+
+
 
         # print(dd)
         return dd
@@ -898,8 +905,8 @@ async def ttt():
 
     # await get_pay(id_telegram, 1)
 
-    # dd = await chek_pay('id_pay_my:310410518:1762961604NOQbR')
-    # print(dd)
+    dd = await chek_pay("id_pay_my:577753618:1762971198hLKTX")
+    print(dd)
     # await rega_new_user(id_telegram)
 
     # await my_prof(id_telegram)
