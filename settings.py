@@ -28,7 +28,10 @@ new_user = {
     "stavka": 5,
 
     # реф
-    "ref_ok": 0
+    "ref_ok": 0,
+
+    # чек на первый депозит
+    "first_bonus": True
 }
 
 

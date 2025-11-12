@@ -533,9 +533,7 @@ async def chek_pay(id_pay_my):
             "description": {
                 "ru": f"Ваш баланс успешно пополнен на {dd_status_pay['amount']} Starts",
                 "en": f"Your balance has been successfully topped up with {dd_status_pay['amount']} Starts"
-            },
-            "img": None,
-            "tgs": None
+            }
 
         }
 
@@ -552,9 +550,7 @@ async def chek_pay(id_pay_my):
             "description": {
                 "ru": f"Счет уже был оплачен ранее",
                 "en": f"The bill has already been paid earlier."
-            },
-            "img": None,
-            "tgs": None
+            }
 
         }
 
@@ -570,9 +566,7 @@ async def chek_pay(id_pay_my):
             "description": {
                 "ru": f"Счет на оплачен",
                 "en": f"The invoice has been paid."
-            },
-            "img": None,
-            "tgs": None
+            }
 
         }
 
@@ -868,6 +862,22 @@ async def my_prof(id_telegram):
     return dd
 
 
+
+async def plus_balans(id_telegram):
+    user = await redata(f"user:{id_telegram}")
+
+    dd = {
+        "list_balans": [20, 50, 100, 500, 1000, 5000],
+        "dubl_bonus": True,
+        "mess_bonus": "Бонус на первый Депозит",
+    }
+
+
+
+    return dd
+
+
+
 async def ttt():
     id_lera = 577753618
     id_nik = 563356818
@@ -881,8 +891,8 @@ async def ttt():
     id_evgeniyshow = 194092787
     # dd = await test_post(10)
     # print(dd)
-    # pay_data {'id_pay_my': 'id_pay_my:310410518:1762866458RxlPS', 'id_telega': 310410518, 'typ': 'typ', 'invoice_link': 'https://t.me/$KlH1TUZcmUi2EgAA69yXu2H9zBQ', 'amount': 1, 'status_pay': '', 'payload': 'id_pay_my:310410518:1762866458RxlPS', 'time': '2025-11-11 16:07'}
 
+    # pay_data {'id_pay_my': 'id_pay_my:310410518:1762961604NOQbR', 'id_telega': 310410518, 'typ': 'typ', 'invoice_link': 'https://t.me/$axlYEwLqqEgSEAAAo12rbstsM5c', 'amount': 1, 'status_pay': '', 'payload': 'id_pay_my:310410518:1762961604NOQbR', 'time': '2025-11-12 18:33'}
     # dd = generate_plinko_scenario(10)
     # print(dd)
     # user = await redata(f"user:{id_telegram}")
@@ -890,11 +900,11 @@ async def ttt():
 
     # await get_pay(id_telegram, 1)
 
-    # await chek_pay()
-
+    # dd = await chek_pay('id_pay_my:310410518:1762961604NOQbR')
+    # print(dd)
     # await rega_new_user(id_telegram)
 
-    await my_prof(id_telegram)
+    # await my_prof(id_telegram)
 
     pass
 
