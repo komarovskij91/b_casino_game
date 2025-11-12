@@ -853,6 +853,20 @@ async def pool_spin():
 
 
 
+async def my_prof(id_telegram):
+    user = await redata(f"user:{id_telegram}")
+    # print(user)
+
+    await chek_new_param(id_telegram, user)
+
+    dd = {
+        "balans": user["stars"],
+        "stavka": user["stavka"]
+    }
+
+    return dd
+
+
 async def ttt():
     id_lera = 577753618
     id_nik = 563356818
@@ -868,14 +882,18 @@ async def ttt():
     # print(dd)
     # pay_data {'id_pay_my': 'id_pay_my:310410518:1762866458RxlPS', 'id_telega': 310410518, 'typ': 'typ', 'invoice_link': 'https://t.me/$KlH1TUZcmUi2EgAA69yXu2H9zBQ', 'amount': 1, 'status_pay': '', 'payload': 'id_pay_my:310410518:1762866458RxlPS', 'time': '2025-11-11 16:07'}
 
-    dd = generate_plinko_scenario(10)
-    print(dd)
+    # dd = generate_plinko_scenario(10)
+    # print(dd)
+    user = await redata(f"user:{id_telegram}")
+    print(user)
 
     # await get_pay(id_telegram, 1)
 
     # await chek_pay()
 
     # await rega_new_user(id_telegram)
+
+    await my_prof(id_telegram)
 
     pass
 

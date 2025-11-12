@@ -25,6 +25,7 @@ new_user = {
     # баланс звезд
     "stars": 200,
 
+    "stavka": 5,
 
     # реф
     "ref_ok": 0
