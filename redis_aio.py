@@ -528,7 +528,7 @@ async def chek_pay(id_pay_my):
         await reupdata(f"user:{id_telegram}", user)
 
         dd = {
-            "status": True
+            "status": True,
             "title": {
                 "ru": "Успех",
                 "en": "Success"
