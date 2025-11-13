@@ -857,8 +857,8 @@ async def my_prof(id_telegram, dd_rega):
 
     user = await redata(f"user:{id_telegram}")
     # print(user)
-    if user != None:
-        await my_prof(id_telegram, dd_rega)
+    if user == None:
+        await rega_new_user(id_telegram, dd_rega)
         user = await redata(f"user:{id_telegram}")
 
 
