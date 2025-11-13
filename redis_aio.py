@@ -901,6 +901,16 @@ async def plus_balans(id_telegram):
     return dd
 
 
+async def str_bonus_ref(id_telegram):
+
+
+    dd = {
+        "ref_link": f"https://t.me/pokemon_stars_bot/go_stars?startapp={id_telegram}",
+        "bonus_stars": 11
+    }
+
+    return dd
+
 
 async def ttt():
     id_lera = 577753618
