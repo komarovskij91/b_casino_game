@@ -893,7 +893,7 @@ async def plus_balans(id_telegram):
     user = await redata(f"user:{id_telegram}")
 
     dd = {
-        "list_balans": [1, 50, 100, 500, 1000, 5000],
+        "list_balans": [1, 5, 10, 500, 1000, 5000],
         "dubl_bonus": True,
         "mess_bonus": "Бонус на первый Депозит",
     }
@@ -930,7 +930,12 @@ async def ttt():
     # pay_data {'id_pay_my': 'id_pay_my:310410518:1762961604NOQbR', 'id_telega': 310410518, 'typ': 'typ', 'invoice_link': 'https://t.me/$axlYEwLqqEgSEAAAo12rbstsM5c', 'amount': 1, 'status_pay': '', 'payload': 'id_pay_my:310410518:1762961604NOQbR', 'time': '2025-11-12 18:33'}
     # dd = generate_plinko_scenario(10)
     # print(dd)
-    user = await redata(f"user:{id_t3_my}")
+
+
+
+
+    user = await redata(f"user:{my_seve}")
+
     print(user)
 
     # await get_pay(id_telegram, 1)
