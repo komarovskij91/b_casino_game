@@ -230,17 +230,6 @@ async def rega_new_user(id_telegram, data=None):
 
 
 
-# Проверка новых параметров
-async def chek_new_param(id_telegram, user_data):
-
-    for new_param in settings.new_user:
-        if new_param not in user_data:
-            user_data[new_param] = settings.new_user[new_param]
-            print(f"добавили для {id_telegram} - {new_param}", settings.new_user[new_param])
-
-    await reupdata(f"user:{id_telegram}", user_data)
-
-    return user_data
 
 
 
@@ -388,7 +377,31 @@ def user_data_rega(data):
     return dd
 
 
+# Проверка новых параметров
+async def chek_new_param(id_telegram, user_data, data_new):
 
+    for new_param in settings.new_user:
+        if new_param not in user_data:
+            user_data[new_param] = settings.new_user[new_param]
+            print(f"добавили для {id_telegram} - {new_param}", settings.new_user[new_param])
+
+
+    if "first_name" in data_new:
+        user_data["first_name"] = data_new["first_name"]
+
+    if "last_name" in data_new:
+        user_data["last_name"] = data_new["last_name"]
+
+    if "username" in data_new:
+        user_data["username"] = data_new["username"]
+
+    if "is_premium" in data_new:
+        user_data["prem"] = data_new["is_premium"]
+
+
+    await reupdata(f"user:{id_telegram}", user_data)
+
+    return user_data
 
 
 ###########
@@ -862,7 +875,10 @@ async def my_prof(id_telegram, dd_rega):
         user = await redata(f"user:{id_telegram}")
 
 
-    await chek_new_param(id_telegram, user)
+
+
+
+    await chek_new_param(id_telegram, user, dd_rega)
 
     dd = {
         "balans": user["stars"],
@@ -895,6 +911,7 @@ async def ttt():
     my_seve = 8413154647  # Егорка Комар
     id_afon = 433688884
     sacha = 980627987
+    id_t3_my = 8319912174
 
     id_evgeniyshow = 194092787
     # dd = await test_post(10)
@@ -903,7 +920,8 @@ async def ttt():
     # pay_data {'id_pay_my': 'id_pay_my:310410518:1762961604NOQbR', 'id_telega': 310410518, 'typ': 'typ', 'invoice_link': 'https://t.me/$axlYEwLqqEgSEAAAo12rbstsM5c', 'amount': 1, 'status_pay': '', 'payload': 'id_pay_my:310410518:1762961604NOQbR', 'time': '2025-11-12 18:33'}
     # dd = generate_plinko_scenario(10)
     # print(dd)
-    # print(user)
+    user = await redata(f"user:{id_t3_my}")
+    print(user)
 
     # await get_pay(id_telegram, 1)
 
@@ -912,12 +930,12 @@ async def ttt():
     # await rega_new_user(id_telegram)
 
     # await my_prof(id_telegram)
-    spin = 10
-    for i in range(1000):
-        data_spin = generate_plinko_scenario(spin)
-        win_spin = data_spin["result"]["win_amount"]
-        if win_spin == 100:
-            print(data_spin)
+    # spin = 10
+    # for i in range(1000):
+    #     data_spin = generate_plinko_scenario(spin)
+    #     win_spin = data_spin["result"]["win_amount"]
+    #     if win_spin == 100:
+    #         print(data_spin)
 
 
     pass
