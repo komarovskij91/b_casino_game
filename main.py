@@ -235,9 +235,8 @@ async def api_v3(request: model.Request):
         dd_rega = user_data_rega(dd)
         return await my_prof(id_telega, dd_rega)
 
+
     # Платежи
-
-
     if request.method == "get_pay":
         return await get_pay(id_telega, req["params"]["amount"])
 
@@ -247,6 +246,7 @@ async def api_v3(request: model.Request):
 
     # Бонусная страница
     if request.method == "str_bonus_ref":
+        print("str_bonus_ref")
         return await str_bonus_ref(id_telega)
 
 
