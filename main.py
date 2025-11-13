@@ -213,6 +213,10 @@ async def api_v3(request: model.Request):
 
 
 
+
+
+
+
     # Стартовые параметры
     if request.method == "start_data":
         return await start_data_0()
@@ -227,7 +231,9 @@ async def api_v3(request: model.Request):
         return await plus_balans(id_telega)
 
     if request.method == "my_prof":
-        return await my_prof(id_telega)
+        dd = user_data_chek(qq)
+        dd_rega = user_data_rega(dd)
+        return await my_prof(id_telega, dd_rega)
 
     # Платежи
 

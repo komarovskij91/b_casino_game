@@ -23,9 +23,9 @@ new_user = {
     "ref_bonus": False,
 
     # баланс звезд
-    "stars": 200,
+    "stars": 100,
 
-    "stavka": 5,
+    "stavka": 1,
 
     # реф
     "ref_ok": 0,

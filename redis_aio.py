@@ -852,9 +852,15 @@ async def pool_spin():
 
 
 
-async def my_prof(id_telegram):
+async def my_prof(id_telegram, dd_rega):
+
+
     user = await redata(f"user:{id_telegram}")
     # print(user)
+    if user != None:
+        await my_prof(id_telegram, dd_rega)
+        user = await redata(f"user:{id_telegram}")
+
 
     await chek_new_param(id_telegram, user)
 
@@ -875,7 +881,6 @@ async def plus_balans(id_telegram):
         "dubl_bonus": True,
         "mess_bonus": "Бонус на первый Депозит",
     }
-
 
     return dd
 
@@ -902,15 +907,23 @@ async def ttt():
 
     # await get_pay(id_telegram, 1)
 
-    dd = await chek_pay("id_pay_my:577753618:1762971198hLKTX")
-    print(dd)
+    # dd = await chek_pay("id_pay_my:577753618:1762971198hLKTX")
+    # print(dd)
     # await rega_new_user(id_telegram)
 
     # await my_prof(id_telegram)
+    spin = 10
+    for i in range(1000):
+        data_spin = generate_plinko_scenario(spin)
+        win_spin = data_spin["result"]["win_amount"]
+        if win_spin == 100:
+            print(data_spin)
+
 
     pass
 
 
 
 # asyncio.get_event_loop().run_until_complete(ttt())
+
 
