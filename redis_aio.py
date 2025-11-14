@@ -590,10 +590,10 @@ async def chek_pay(id_pay_my):
         ref1 = user["ref"]
         user1 = await redata(f"user:{ref1}")
         if "stars" in user1:
-            user1["stars"] += round(dd_status_pay["amount"] * 0.2, 2)
+            user1["stars"] += round(int(dd_status_pay["amount"]) * 0.2, 2)
             await reupdata(f"user:{ref1}", user1)
 
-            await mess_up_balans(ref1, round(dd_status_pay["amount"] * 0.2, 2), "ref_lvl_1")
+            await mess_up_balans(ref1, round(int(dd_status_pay["amount"]) * 0.2, 2), "ref_lvl_1")
 
 
 
@@ -601,7 +601,7 @@ async def chek_pay(id_pay_my):
             ref2 = user1["ref"]
             user2 = await redata(f"user:{ref2}")
             if "stars" in user2:
-                user2["stars"] += round(dd_status_pay["amount"] * 0.05, 2)
+                user2["stars"] += round(int(dd_status_pay["amount"]) * 0.05, 2)
                 await reupdata(f"user:{ref2}", user2)
 
                 await mess_up_balans(ref2, round(dd_status_pay["amount"] * 0.05, 2), "ref_lvl_2")
