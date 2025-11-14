@@ -604,7 +604,7 @@ async def chek_pay(id_pay_my):
                 user2["stars"] += round(int(dd_status_pay["amount"]) * 0.05, 2)
                 await reupdata(f"user:{ref2}", user2)
 
-                await mess_up_balans(ref2, round(dd_status_pay["amount"] * 0.05, 2), "ref_lvl_2")
+                await mess_up_balans(ref2, round(int(dd_status_pay["amount"]) * 0.05, 2), "ref_lvl_2")
 
 
 
