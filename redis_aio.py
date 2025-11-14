@@ -510,6 +510,48 @@ async def get_pay(id_telega, many):
         }
 
 
+
+
+async def mess_up_balans(id_telegram, amount, typ_up):
+
+    if typ_up == "up_balans":
+        mess = "Пополнение"
+
+    if typ_up == "ref_lvl_1":
+        mess = "Пополнение за реф 1 уровня"
+
+    if typ_up == "ref_lvl_2":
+        mess = "Пополнение за реф 2 уровня"
+
+
+    balans_up = await redata(f"balans_up:{id_telegram}")
+    if balans_up == None:
+        balans_up = {
+            "list": [
+                {
+                    "time": time.time(),
+                    "mess": mess + f"+{amount}"
+                }
+            ]
+        }
+        await reupdata(f"balans_up:{id_telegram}", balans_up)
+
+
+    else:
+        balans_up["list"].append(
+            {
+                "time": time.time(),
+                "mess": mess + f"+{amount}"
+            }
+        )
+
+        await reupdata(f"balans_up:{id_telegram}", balans_up)
+
+
+
+
+
+
 # проверка платежа
 async def chek_pay(id_pay_my):
     def extract_user_id(key: str) -> int:
@@ -531,7 +573,7 @@ async def chek_pay(id_pay_my):
 
     # проверяем полачен ли платеж
     dd_status_pay = await stars_payments(id_pay_my)
-    print("dd_status_pay", dd_status_pay)
+    # print("dd_status_pay", dd_status_pay)
 
     if dd_status_pay["status"] == True:
 
@@ -539,6 +581,36 @@ async def chek_pay(id_pay_my):
         user = await redata(f"user:{id_telegram}")
         user["stars"] += int(dd_status_pay["amount"])
         await reupdata(f"user:{id_telegram}", user)
+
+        await mess_up_balans(id_telegram, int(dd_status_pay["amount"]), "up_balans")
+
+
+
+        # проверка первого реферала
+        ref1 = user["ref"]
+        user1 = await redata(f"user:{ref1}")
+        if "stars" in user1:
+            user1["stars"] += round(dd_status_pay["amount"] * 0.2, 2)
+            await reupdata(f"user:{ref1}", user1)
+
+            await mess_up_balans(ref1, round(dd_status_pay["amount"] * 0.2, 2), "ref_lvl_1")
+
+
+
+            # проверка второго реферала
+            ref2 = user1["ref"]
+            user2 = await redata(f"user:{ref2}")
+            if "stars" in user2:
+                user2["stars"] += round(dd_status_pay["amount"] * 0.05, 2)
+                await reupdata(f"user:{ref2}", user2)
+
+                await mess_up_balans(ref2, round(dd_status_pay["amount"] * 0.05, 2), "ref_lvl_2")
+
+
+
+
+
+
 
         dd = {
             "status": True,
@@ -932,9 +1004,16 @@ async def ttt():
     # print(dd)
 
 
+    # 1 я
+    # 2 my_seve
+    # 3 id_t3_my
 
 
-    user = await redata(f"user:{my_seve}")
+    # await del_key(f"user:{8319912174}")
+
+
+
+    user = await redata(f"user:{id_t3_my}")
 
     print(user)
 
