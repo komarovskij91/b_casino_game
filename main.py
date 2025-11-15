@@ -158,6 +158,7 @@ async def v3_get():
 # -----------------------------
 # Основной эндпоинт для TMA
 # -----------------------------
+
 @app.post("/v3")
 async def api_v3(request: model.Request):
     # print("Получен запрос:", request.model_dump())
@@ -213,7 +214,19 @@ async def api_v3(request: model.Request):
 
 
 
+    if request.method == "start_bot":
+        # data = {
+        #     "username": user_n,
+        #     "first_name": first_n,
+        #     'last_name': last_n,
+        #     'language_code': language,
+        #     "ref": ref_code
+        # }
 
+        dd = user_data_chek(qq["params"]["data"])
+        dd_rega = user_data_rega(dd)
+
+        await rega_new_user(id_telega, dd_rega)
 
 
 

@@ -31,7 +31,9 @@ new_user = {
     "ref_ok": 0,
 
     # чек на первый депозит
-    "first_bonus": True
+    "first_bonus": True,
+
+    "balans_bonus": 0
 }
 
 

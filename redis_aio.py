@@ -219,7 +219,7 @@ async def rega_new_user(id_telegram, data=None):
 
             user = await redata(f"user:{id_telegram}")
 
-            mess = "ЕЕЕ"
+            mess = "Приветствую в игре! Лови старсы в быстрой игре Плинко!"
             try:
                 await bot.send_message(id_telegram, mess)
             except:
@@ -530,7 +530,7 @@ async def mess_up_balans(id_telegram, amount, typ_up):
             "list": [
                 {
                     "time": time.time(),
-                    "mess": mess + f"+{amount}"
+                    "mess": mess + f" +{amount} Stars"
                 }
             ]
         }
@@ -583,7 +583,7 @@ async def chek_pay(id_pay_my):
         await reupdata(f"user:{id_telegram}", user)
 
         await mess_up_balans(id_telegram, int(dd_status_pay["amount"]), "up_balans")
-
+        await new_dep(id_telegram, int(dd_status_pay["amount"]), 3)
 
 
         # проверка первого реферала
@@ -594,7 +594,7 @@ async def chek_pay(id_pay_my):
             await reupdata(f"user:{ref1}", user1)
 
             await mess_up_balans(ref1, round(int(dd_status_pay["amount"]) * 0.2, 2), "ref_lvl_1")
-
+            await new_dep(id_telegram, round(int(dd_status_pay["amount"]) * 0.2, 2), 30)
 
 
             # проверка второго реферала
@@ -605,7 +605,7 @@ async def chek_pay(id_pay_my):
                 await reupdata(f"user:{ref2}", user2)
 
                 await mess_up_balans(ref2, round(int(dd_status_pay["amount"]) * 0.05, 2), "ref_lvl_2")
-
+                await new_dep(id_telegram, round(int(dd_status_pay["amount"]) * 0.05, 2), 30)
 
 
 
@@ -920,6 +920,8 @@ async def test_post(id_telega, spin):
     user["stavka"] = spin
     await reupdata(f"user:{id_telega}", user)
 
+    await voidjer(id_telega, spin, user["stars"])
+
     return data_spin
 
 
@@ -929,10 +931,6 @@ async def start_data_0():
     dd = start_data()
     return dd
 
-
-
-async def pool_spin():
-    pass
 
 
 
@@ -946,10 +944,6 @@ async def my_prof(id_telegram, dd_rega):
         await rega_new_user(id_telegram, dd_rega)
         user = await redata(f"user:{id_telegram}")
 
-
-
-
-
     await chek_new_param(id_telegram, user, dd_rega)
 
     dd = {
@@ -961,6 +955,7 @@ async def my_prof(id_telegram, dd_rega):
 
 
 
+# суммы пополнения
 async def plus_balans(id_telegram):
     user = await redata(f"user:{id_telegram}")
 
@@ -974,14 +969,89 @@ async def plus_balans(id_telegram):
 
 
 async def str_bonus_ref(id_telegram):
-
+    user = await redata(f"user:{id_telegram}")
 
     dd = {
         "ref_link": f"https://t.me/pokemon_stars_bot/go_stars?startapp={id_telegram}",
-        "bonus_stars": 11
+        "bonus_stars": user["balans_bonus"]
     }
 
     return dd
+
+async def pay_chek(id_telegram):
+
+    dd = await fetch_all_2(f"id_pay_my:{id_telegram}*")
+
+    for i in dd:
+        if i["status_pay"] == "pay":
+            return True
+
+
+async def str_money(id_telegram):
+    user = await redata(f"user:{id_telegram}")
+
+    dd = {
+        "status_money": await pay_chek(id_telegram)
+    }
+
+
+    return dd
+
+
+# новый баланс
+async def new_dep(id_telegram, balans, kef):
+
+    user_dep = await redata(f"user_dep:{id_telegram}")
+    if user_dep == None:
+        user_dep = {
+            "list": []
+        }
+
+        await reupdata(f"user_dep:{id_telegram}", user_dep)
+
+
+    dd = {
+        "id": idrr0(),
+        "balans": balans,  # сумма пополнения
+        "wr_required": int(balans * kef),  # сумма отыгрыша
+        "wr_done": 0,
+        "kef": kef
+    }
+
+    user_dep["list"].append(dd)
+
+    await reupdata(f"user_dep:{id_telegram}", user_dep)
+
+
+
+# спин с отыгрешем
+async def voidjer(id_telegram, spin, balans_user):
+    user_dep = await redata(f"user_dep:{id_telegram}")
+
+    summa_dep_balansov = 0
+    for i in user_dep["list"]:
+        summa_dep_balansov += i["balans"]
+
+    try:
+        dep = user_dep["list"][0]
+    except:
+        return
+
+    dep["wr_done"] += spin
+    user_dep["list"][0] = dep
+
+    if dep["wr_done"] >= dep["wr_required"]:
+        del user_dep["list"][0]
+        await reupdata(f"user_dep:{id_telegram}", user_dep)
+        return
+
+    delta = summa_dep_balansov - balans_user
+
+    if delta >= dep["balans"]:
+        del user_dep["list"][0]
+
+    await reupdata(f"user_dep:{id_telegram}", user_dep)
+
 
 
 async def ttt():
@@ -1004,6 +1074,15 @@ async def ttt():
     # print(dd)
 
 
+    # dd = await fetch_all_2(f"id_pay_my:{id_telegram}*")
+    # print(dd)
+
+    # await new_dep(id_telegram, 200, 3)
+
+    await voidjer(id_telegram, 10, 120)
+
+
+
     # 1 я
     # 2 my_seve
     # 3 id_t3_my
@@ -1013,24 +1092,16 @@ async def ttt():
 
 
 
-    user = await redata(f"user:{id_t3_my}")
+    # await del_key(f"user:{id_t3_my}")
 
-    print(user)
 
-    # await get_pay(id_telegram, 1)
+    # user = await redata(f"user:{id_t3_my}")
+    #
+    # print(user)
 
-    # dd = await chek_pay("id_pay_my:577753618:1762971198hLKTX")
-    # print(dd)
-    # await rega_new_user(id_telegram)
-
-    # await my_prof(id_telegram)
-    # spin = 10
-    # for i in range(1000):
-    #     data_spin = generate_plinko_scenario(spin)
-    #     win_spin = data_spin["result"]["win_amount"]
-    #     if win_spin == 100:
-    #         print(data_spin)
-
+    # for i in [id_telegram, my_seve, id_t3_my]:
+    #     balans_up = await redata(f"balans_up:{i}")
+    #     print(balans_up)
 
     pass
 
