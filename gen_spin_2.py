@@ -6,7 +6,7 @@ from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional, Tuple, Any
 
 ROWS = 11
-MULTIPLIERS = [15, 7, 4, 2, 1.1, 0.5, 0.3, 0.5, 1.1, 2, 4, 7, 15]
+MULTIPLIERS = [10, 4, 2, 1.5, 0.9, 0.5, 0.3, 0.5, 0.9, 1.5, 2, 4, 10]
 # MULTIPLIERS = [15.6, 7.5, 3.7, 2.2, 1.1, 0.6, 0.16, 0.6, 1.1, 2.2, 3.7, 7.5, 15.6]
 BALL_RADIUS = 9
 PIN_RADIUS = 7
