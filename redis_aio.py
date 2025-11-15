@@ -578,11 +578,17 @@ async def chek_pay(id_pay_my):
 
         # # выдаем то что надо выдать
         user = await redata(f"user:{id_telegram}")
+        ff = user["stars"]
         user["stars"] += int(dd_status_pay["amount"])
         await reupdata(f"user:{id_telegram}", user)
 
         await mess_up_balans(id_telegram, int(dd_status_pay["amount"]), "up_balans")
         await new_dep(id_telegram, int(dd_status_pay["amount"]), 3)
+
+        dd = await pay_chek(id_telegram)
+
+        if dd == False:
+            await new_dep(id_telegram, int(ff), 40)
 
 
         # проверка первого реферала
@@ -593,7 +599,7 @@ async def chek_pay(id_pay_my):
             await reupdata(f"user:{ref1}", user1)
 
             await mess_up_balans(ref1, round(int(dd_status_pay["amount"]) * 0.2, 2), "ref_lvl_1")
-            await new_dep(id_telegram, round(int(dd_status_pay["amount"]) * 0.2, 2), 30)
+            await new_dep(ref1, round(int(dd_status_pay["amount"]) * 0.2, 2), 30)
 
 
             # проверка второго реферала
@@ -604,7 +610,7 @@ async def chek_pay(id_pay_my):
                 await reupdata(f"user:{ref2}", user2)
 
                 await mess_up_balans(ref2, round(int(dd_status_pay["amount"]) * 0.05, 2), "ref_lvl_2")
-                await new_dep(id_telegram, round(int(dd_status_pay["amount"]) * 0.05, 2), 30)
+                await new_dep(ref2, round(int(dd_status_pay["amount"]) * 0.05, 2), 30)
 
 
 
@@ -1001,6 +1007,8 @@ async def pay_chek(id_telegram):
             return True
 
 
+    return False
+
 async def str_money(id_telegram):
     user = await redata(f"user:{id_telegram}")
 
@@ -1102,17 +1110,6 @@ async def ttt():
     # print(data_spin["result"]["win_amount"])
 
 
-    nn = 1000
-    n1 = 0
-    for i in range(nn):
-        data_spin = generate_plinko_scenario(10)
-        # print(data_spin["result"]["win_amount"] / data_spin["result"]["bet"])
-        # print("bet", data_spin["result"]["bet"], "win", data_spin["result"]["win_amount"])
-        if data_spin["result"]["win_amount"] / data_spin["result"]["bet"] == MULTIPLIERS[0]:
-            print("okok")
-            n1 += 1
-
-    print(n1 / nn * 100)
     # 1 я
     # 2 my_seve
     # 3 id_t3_my
