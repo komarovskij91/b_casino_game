@@ -33,7 +33,9 @@ new_user = {
     # чек на первый депозит
     "first_bonus": True,
 
-    "balans_bonus": 0
+    "balans_bonus": 0,
+
+    "start_bonus_spin": 0
 }
 
 

@@ -40,9 +40,8 @@ from typing import List, Dict, Any, Optional
 
 from pay import get_pay_up_slot
 
+from gen_spin_2 import MULTIPLIERS
 
-
-# from gen_spin import generate_plinko_scenario, start_data
 from gen_spin_2 import generate_plinko_scenario, start_data
 
 
@@ -910,10 +909,25 @@ async def fetch_all_2(pattern: str, batch_size: int = 100) -> List[Dict[str, Any
 
 
 
+
+# bonus_spin = 300
+
 # запуск спина
 async def test_post(id_telega, spin):
+    global bonus_spin
     user = await redata(f"user:{id_telega}")
     data_spin = generate_plinko_scenario(spin)
+    # bonus_spin -= 1
+    # if bonus_spin == 0:
+    #     data_spin = generate_plinko_scenario(spin)
+    user["start_bonus_spin"] += 1
+    if user["start_bonus_spin"] == 5:
+        while True:
+            data_spin = generate_plinko_scenario(spin)
+            if data_spin["result"]["win_amount"] / data_spin["result"]["bet"] == MULTIPLIERS[0]:
+                print(id_telega, "БОнус спин")
+                break
+
     win_spin = data_spin["result"]["win_amount"]
     user["stars"] -= spin
     user["stars"] += win_spin
@@ -1079,10 +1093,26 @@ async def ttt():
 
     # await new_dep(id_telegram, 200, 3)
 
-    await voidjer(id_telegram, 10, 120)
+    # await voidjer(id_telegram, 10, 120)
+    # user_dep = await redata(f"user_dep:{id_telegram}")
+    # print(user_dep)
+
+    # data_spin = generate_plinko_scenario(10)
+    # print(data_spin["result"]["bet"])
+    # print(data_spin["result"]["win_amount"])
 
 
+    nn = 1000
+    n1 = 0
+    for i in range(nn):
+        data_spin = generate_plinko_scenario(10)
+        # print(data_spin["result"]["win_amount"] / data_spin["result"]["bet"])
+        # print("bet", data_spin["result"]["bet"], "win", data_spin["result"]["win_amount"])
+        if data_spin["result"]["win_amount"] / data_spin["result"]["bet"] == MULTIPLIERS[0]:
+            print("okok")
+            n1 += 1
 
+    print(n1 / nn * 100)
     # 1 я
     # 2 my_seve
     # 3 id_t3_my
